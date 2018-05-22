@@ -1,0 +1,3 @@
+cmake/Cooking.cmake
+**/CMakeLists.txt.*
+**/build*/
