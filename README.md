@@ -45,7 +45,7 @@ A common work-flow with CMake is to embed projects inside other projects with `a
 
 # Examples
 
-The [CMakeWorkflows](https://gitlab.com/jhaberku/CMakeWorkflows) repository describes in some depth a work-flow with `cmake-cooking`. You may also be interested in the CMake specification of the [Pretty](https://gitlab.com/jhaberku/Pretty) and [Snake](https://gitlab.com/jhaberku/Snake) projects for reference.
+The [CMakeWorkflows](https://github.com/hakuch/CMakeWorkflows) repository describes in some depth a work-flow with `cmake-cooking`. You may also be interested in the CMake specification of the [Pretty](https://github.com/hakuch/Pretty) and [Snake](https://github.com/hakuch/Snake) projects for reference.
 
 # References
 
