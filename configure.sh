@@ -71,7 +71,7 @@ macro (project name)
 
   set (Cooking_RECIPE "" CACHE STRING "Configure ${name}'s dependencies according to the named recipe.")
 
-  if (${root})
+  if (root)
     _project (${name} ${ARGN})
 
     if (NOT ("${Cooking_RECIPE}" STREQUAL ""))
