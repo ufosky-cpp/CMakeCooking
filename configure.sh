@@ -65,7 +65,7 @@ macro (project name)
     set (root OFF)
   endif ()
 
-  option ("${name}_ROOT_PROJECT"
+  option ("Cooking_${name}_ROOT_PROJECT"
     "Configure ${name} as the root project of a CMake tree."
     ${root})
 
