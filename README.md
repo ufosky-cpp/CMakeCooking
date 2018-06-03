@@ -1,13 +1,15 @@
-cmake-cooking - Composable CMake projects
+cmake-cooking - Development environments for CMake projects
 -----------------------------------------
 
-`cmake-cooking` is a very thin layer over CMake (`CMakeLists.txt` files are compatible even if `cmake-cooking` is not installed) for creating composable and scalable builds with arbitrary and flexible dependencies.
+`cmake-cooking` is an extremely thin layer over CMake for creating flexible and reproducible development environments for CMake projects. Projects which use `cmake-cooking` will work even if `cmake-cooking` is not installed or used.
 
 ## Motivation
 
-`cmake-cooking` encourages modern CMake best practises (see "References" below) by enforcing that a project's build specification (and particularly how it finds its dependencies) allows it to be composed with other projects arbitrarily.
+A modern CMake project should allow its dependencies to be satisfied arbitrarily through the `find_package` mechanism in order to maximize flexibility and composability with other projects.
 
-`cmake-cooking` also supports so-called "superbuilds" (in CMake-parlance) for reproducible and easy developer environments including all dependencies. It does this with the `ExternalProject` module included in CMake.
+`cmake-cooking` allows you to easily create development environments (including all dependencies) for modern CMake projects. These dependencies are seamlessly fetched, configured, and built.
+
+`cmake-cooking` is similar to the  "superbuild" concept (in CMake-parlance). It's implementation wraps the `ExternalProject` module included in CMake.
 
 ## Usage
 
@@ -20,28 +22,24 @@ list (APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 include (Cooking OPTIONAL)
 ```
 
-With `cmake-cooking`, all of your dependencies are specified in `CMakeLists.txt` **exclusively** with `find_package`, like so:
+With `cmake-cooking`, all of your dependencies must be specified in `CMakeLists.txt` **exclusively** with `find_package`, like so:
 
 ```CMake
 find_package (Boost 1.64.0 REQUIRED)
 ```
 
-In this way, the choice of how to **satisfy** the dependencies is flexible and up to the particular developer. They can be:
+In this way, the choice of how to **satisfy** the dependencies is flexible.
 
-- Installed on the system
-- Specified manually in the CMake cache via `cmake` or the CMake GUI
-- Specified in a "recipe" (a `cmake-cooking` concept), which is collection of "ingredients" (another concept). Each ingredient is really a CMake `ExternalProject`, the source of which can be fetched from version control (e.g., Git), found on the file-system, or at a remote address.
-
-Instead of running `cmake` directly, run `configure.sh`. This will:
+Instead of running `cmake` to configure the project, run `configure.sh`. This will:
 
  - Generate `cmake/Cooking.cmake` in the source directory. This file should **not** be tracked in version control
  - Create the build directory
- - Optionally fetch, configure, and build all dependencies if they are specified in a recipe (with the `-r` option)
+ - If a recipe is included (with the `-r option) then fetch, configure, and build all dependencies of the project
  - Configure the project
 
 # Compatibility
 
-A common work-flow with CMake is to embed projects inside other projects with `add_subdirectory`. This approach prevents projects from being composed arbitrarily. Nonetheless, `cmake-cooking` projects will work without modification when they are included in other projects this way. The cache variable `${project_name}_ROOT_PROJECT` is defined as `YES` only when the project is not embedded.
+A common work-flow with CMake is to embed projects inside other projects with `add_subdirectory`. This approach prevents projects from being composed arbitrarily. Nonetheless, `cmake-cooking` projects will work without modification when they are included in other projects this way. The cache variable `Cooking_${project_name}_ROOT_PROJECT` is defined as `YES` only when the project is not embedded.
 
 # Examples
 
