@@ -79,6 +79,8 @@ macro (project name)
         ALL
         COMMAND cmake -E touch ${CMAKE_CURRENT_BINARY_DIR}/ready.txt)
 
+      set (ingredients_dir ${CMAKE_CURRENT_BINARY_DIR}/installed_ingredients)
+      list (APPEND CMAKE_PREFIX_PATH ${ingredients_dir})
       include ("recipe/${Cooking_RECIPE}.cmake")
 
       if (NOT EXISTS ${CMAKE_CURRENT_BINARY_DIR}/ready.txt)
