@@ -91,8 +91,22 @@ macro (project name)
 endmacro ()
 
 macro (cooking_ingredient name)
+  set (args "${ARGN}")
+
+  if (SOURCE_DIR IN_LIST args)
+    set (source_dir "")
+  else ()
+    set (source_dir SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/${name}_src)
+  endif ()
+
   include (ExternalProject)
-  ExternalProject_add (ingredient_${name} "${ARGN}")
+
+  ExternalProject_add (ingredient_${name}
+    ${source_dir}
+    BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/${name}_build
+    INSTALL_DIR ${ingredients_dir}
+    "${ARGN}")
+
   add_dependencies (ingredients ingredient_${name})
 endmacro ()
 EOF
