@@ -34,16 +34,18 @@ generator="Ninja"
 recipe=""
 build_dir="${source_dir}/build"
 cmake_dir="${source_dir}/cmake"
+build_type="Debug"
 
 usage() {
-    echo "Usage: $0 [-r RECIPE] [-g GENERATOR (=${generator})] -d BUILD_DIR (=${build_dir}) [-h]" 1>&2
+    echo "Usage: $0 [-r RECIPE] [-g GENERATOR (=${generator})] -d BUILD_DIR (=${build_dir}) -t BUILD_TYPE (=${build_type}) [-h]" 1>&2
 }
 
-while getopts "r:g:d:h" arg; do
+while getopts "r:g:d:t:h" arg; do
     case "${arg}" in
         r) recipe=${OPTARG} ;;
         g) generator=${OPTARG} ;;
         d) build_dir=${OPTARG} ;;
+        t) build_type=${OPTARG} ;;
         h) usage; exit 0 ;;
         *) usage; exit 1 ;;
     esac
@@ -99,10 +101,17 @@ macro (cooking_ingredient name)
     set (source_dir SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/${name}_src)
   endif ()
 
+  if ("${ARGN}" MATCHES .*CMAKE_BUILD_TYPE.*)
+    set (build_type "")
+  else ()
+    set (build_type CMAKE_ARGS -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE})
+  endif ()
+
   include (ExternalProject)
 
   ExternalProject_add (ingredient_${name}
     ${source_dir}
+    ${build_type}
     BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/${name}_build
     INSTALL_DIR ${ingredients_dir}
     "${ARGN}")
@@ -115,9 +124,9 @@ mkdir -p "${build_dir}"
 cd "${build_dir}"
 
 if [ -n "${recipe}" ]; then
-    cmake -DCooking_RECIPE="${recipe}" "${@}" -G "${generator}" "${source_dir}"
+    cmake -DCMAKE_BUILD_TYPE="${build_type}" -DCooking_RECIPE="${recipe}" "${@}" -G "${generator}" "${source_dir}"
     cmake --build .
     cmake .
 else
-    cmake "${@}" -G "${generator}" "${source_dir}"
+    cmake -DCMAKE_BUILD_TYPE="${build_type}" "${@}" -G "${generator}" "${source_dir}"
 fi
