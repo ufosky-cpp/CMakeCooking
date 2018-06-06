@@ -110,6 +110,7 @@ macro (cooking_ingredient name)
     ${build_type}
     BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/${name}_build
     INSTALL_DIR ${ingredients_dir}
+    CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
     "${ARGN}")
 
   add_dependencies (ingredients ingredient_${name})
