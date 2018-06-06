@@ -9,7 +9,7 @@ A modern CMake project should allow its dependencies to be satisfied arbitrarily
 
 `cmake-cooking` allows you to easily create development environments (including all dependencies) for modern CMake projects. These dependencies are seamlessly fetched, configured, and built.
 
-`cmake-cooking` is similar to the  "superbuild" concept (in CMake-parlance). It's implementation wraps the `ExternalProject` module included in CMake.
+`cmake-cooking` is similar to the  "superbuild" concept (in CMake-parlance). Its implementation wraps the `ExternalProject` module included in CMake.
 
 ## Usage
 
