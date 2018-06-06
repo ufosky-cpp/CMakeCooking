@@ -37,10 +37,6 @@ Instead of running `cmake` to configure the project, run `cooking.sh`. This will
  - If a recipe is included (with the `-r option) then fetch, configure, and build all dependencies of the project
  - Configure the project
 
-# Compatibility
-
-A common work-flow with CMake is to embed projects inside other projects with `add_subdirectory`. This approach prevents projects from being composed arbitrarily. Nonetheless, `cmake-cooking` projects will work without modification when they are included in other projects this way. The cache variable `Cooking_${project_name}_ROOT_PROJECT` is defined as `YES` only when the project is not embedded.
-
 # Examples
 
 The [CMakeWorkflows](https://github.com/hakuch/CMakeWorkflows) repository describes in some depth a work-flow with `cmake-cooking`. You may also be interested in the CMake specification of the [Pretty](https://github.com/hakuch/Pretty) and [Snake](https://github.com/hakuch/Snake) projects for reference.

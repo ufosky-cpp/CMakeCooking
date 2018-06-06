@@ -67,10 +67,6 @@ macro (project name)
     set (root OFF)
   endif ()
 
-  option ("Cooking_${name}_ROOT_PROJECT"
-    "Configure ${name} as the root project of a CMake tree."
-    ${root})
-
   set (Cooking_RECIPE "" CACHE STRING "Configure ${name}'s dependencies according to the named recipe.")
 
   if (root)
