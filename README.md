@@ -13,7 +13,7 @@ A modern CMake project should allow its dependencies to be satisfied arbitrarily
 
 ## Usage
 
-Simply copy `configure.sh` into your project's root source directory.
+Simply copy `cooking.sh` into your project's root source directory.
 
 Your `CMakeLists.txt` file is unchanged except for these two lines after the mandatory `cmake_minimum_required` statement:
 
@@ -30,7 +30,7 @@ find_package (Boost 1.64.0 REQUIRED)
 
 In this way, the choice of how to **satisfy** the dependencies is flexible.
 
-Instead of running `cmake` to configure the project, run `configure.sh`. This will:
+Instead of running `cmake` to configure the project, run `cooking.sh`. This will:
 
  - Generate `cmake/Cooking.cmake` in the source directory. This file should **not** be tracked in version control
  - Create the build directory
