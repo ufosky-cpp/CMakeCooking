@@ -30,11 +30,10 @@ set -e
 
 source_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-generator="Ninja"
 recipe=""
 build_dir="${source_dir}/build"
-cmake_dir="${source_dir}/cmake"
 build_type="Debug"
+generator="Ninja"
 
 usage() {
     echo "Usage: $0 [-r RECIPE] [-g GENERATOR (=${generator})] -d BUILD_DIR (=${build_dir}) -t BUILD_TYPE (=${build_type}) [-h]" 1>&2
@@ -53,6 +52,7 @@ done
 
 shift $((OPTIND - 1))
 
+cmake_dir="${source_dir}/cmake"
 mkdir -p "${cmake_dir}"
 
 cat <<'EOF' > "${cmake_dir}/Cooking.cmake"
