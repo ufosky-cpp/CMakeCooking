@@ -116,6 +116,12 @@ macro (cooking_ingredient name)
     set (_cooking_source_dir SOURCE_DIR ${_cooking_ingredient_dir}/src)
   endif ()
 
+  if ((BUILD_IN_SOURCE IN_LIST _cooking_args) OR (BINARY_DIR IN_LIST _cooking_args))
+    set (_cooking_binary_dir "")
+  else ()
+    set (_cooking_binary_dir BINARY_DIR ${_cooking_ingredient_dir}/build)
+  endif ()
+
   if ("${ARGN}" MATCHES .*CMAKE_BUILD_TYPE.*)
     set (_cooking_build_type "")
   else ()
@@ -132,10 +138,10 @@ macro (cooking_ingredient name)
 
   ExternalProject_add (ingredient_${name}
     ${_cooking_source_dir}
+    ${_cooking_binary_dir}
     ${_cooking_build_type}
     PREFIX ${_cooking_ingredient_dir}
     STAMP_DIR ${_cooking_ingredient_dir}/stamp
-    BINARY_DIR ${_cooking_ingredient_dir}/build
     INSTALL_DIR ${_cooking_stow_dir}/${name}
     CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
     STEP_TARGETS install
