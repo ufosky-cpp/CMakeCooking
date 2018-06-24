@@ -40,12 +40,12 @@ usage() {
     echo "Usage: $0 [-r RECIPE] [-g GENERATOR (=${generator})] -d BUILD_DIR (=${build_dir}) -t BUILD_TYPE (=${build_type}) [-h]" 1>&2
 }
 
-while getopts "r:g:d:t:lh" arg; do
+while getopts "r:d:t:g:lh" arg; do
     case "${arg}" in
         r) recipe=${OPTARG} ;;
-        g) generator=${OPTARG} ;;
         d) build_dir=${OPTARG} ;;
         t) build_type=${OPTARG} ;;
+        g) generator=${OPTARG} ;;
         l) list_only="1" ;;
         h) usage; exit 0 ;;
         *) usage; exit 1 ;;
