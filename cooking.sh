@@ -122,6 +122,12 @@ macro (cooking_ingredient name)
     set (_cooking_binary_dir BINARY_DIR ${_cooking_ingredient_dir}/build)
   endif ()
 
+  if (UPDATE_COMMAND IN_LIST _cooking_args)
+    set (_cooking_update_command "")
+  else ()
+    set (_cooking_update_command UPDATE_COMMAND)
+  endif ()
+
   if ("${ARGN}" MATCHES .*CMAKE_BUILD_TYPE.*)
     set (_cooking_build_type "")
   else ()
@@ -140,6 +146,7 @@ macro (cooking_ingredient name)
     ${_cooking_source_dir}
     ${_cooking_binary_dir}
     ${_cooking_build_type}
+    ${_cooking_update_command} ""
     PREFIX ${_cooking_ingredient_dir}
     STAMP_DIR ${_cooking_ingredient_dir}/stamp
     INSTALL_DIR ${_cooking_stow_dir}/${name}
