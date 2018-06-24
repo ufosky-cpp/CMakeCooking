@@ -122,30 +122,6 @@ macro (cooking_ingredient name)
   set (_cooking_args "${ARGN}")
   set (_cooking_ingredient_dir ${_cooking_dir}/ingredient/${name})
 
-  if (SOURCE_DIR IN_LIST _cooking_args)
-    set (_cooking_source_dir "")
-  else ()
-    set (_cooking_source_dir SOURCE_DIR ${_cooking_ingredient_dir}/src)
-  endif ()
-
-  if ((BUILD_IN_SOURCE IN_LIST _cooking_args) OR (BINARY_DIR IN_LIST _cooking_args))
-    set (_cooking_binary_dir "")
-  else ()
-    set (_cooking_binary_dir BINARY_DIR ${_cooking_ingredient_dir}/build)
-  endif ()
-
-  if (UPDATE_COMMAND IN_LIST _cooking_args)
-    set (_cooking_update_command "")
-  else ()
-    set (_cooking_update_command UPDATE_COMMAND)
-  endif ()
-
-  if ("${ARGN}" MATCHES .*CMAKE_BUILD_TYPE.*)
-    set (_cooking_build_type "")
-  else ()
-    set (_cooking_build_type CMAKE_ARGS -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE})
-  endif ()
-
   add_custom_target (_cooking_ingredient_${name}_post_install
     DEPENDS ${Cooking_INGREDIENTS_DIR}/.cooking_ingredient_${name})
 
@@ -157,20 +133,77 @@ macro (cooking_ingredient name)
       MAIN_DEPENDENCY ${Cooking_INGREDIENTS_DIR}/.cooking_stamp
       COMMAND ${CMAKE_COMMAND} -E touch ${Cooking_INGREDIENTS_DIR}/.cooking_ingredient_${name})
   else ()
+    cmake_parse_arguments (
+      _cooking_parsed_args
+      ""
+      ""
+      "CMAKE_ARGS"
+      ${_cooking_args})
+
     include (ExternalProject)
     set (_cooking_stow_dir ${_cooking_dir}/stow)
-    string (REPLACE "<DISABLE>" "" _cooking_forwarded_args "${_cooking_args}")
+    string (REPLACE "<DISABLE>" "" _cooking_forwarded_args "${_cooking_parsed_args_UNPARSED_ARGUMENTS}")
+
+    if (NOT (SOURCE_DIR IN_LIST _cooking_args))
+      set (_cooking_source_dir SOURCE_DIR ${_cooking_ingredient_dir}/src)
+    else ()
+      set (_cooking_source_dir "")
+    endif ()
+
+    if (NOT ((BUILD_IN_SOURCE IN_LIST _cooking_args) OR (BINARY_DIR IN_LIST _cooking_args)))
+      set (_cooking_binary_dir BINARY_DIR ${_cooking_ingredient_dir}/build)
+    else ()
+      set (_cooking_binary_dir "")
+    endif ()
+
+    if (NOT (UPDATE_COMMAND IN_LIST _cooking_args))
+      set (_cooking_update_command UPDATE_COMMAND)
+    else ()
+      set (_cooking_update_command "")
+    endif ()
+
+    set (_cooking_extra_cmake_args
+      -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>)
+
+    if (NOT ("${ARGN}" MATCHES .*CMAKE_BUILD_TYPE.*))
+      list (APPEND _cooking_extra_cmake_args -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE})
+    endif ()
+
+    if (NOT (CONFIGURE_COMMAND IN_LIST _cooking_args))
+      set (_cooking_configure_command
+        CONFIGURE_COMMAND
+        ${CMAKE_COMMAND}
+        ${_cooking_parsed_args_CMAKE_ARGS}
+        ${_cooking_extra_cmake_args}
+        <SOURCE_DIR>)
+    else ()
+      set (_cooking_configure_command "")
+    endif ()
+
+    if (NOT (BUILD_COMMAND IN_LIST _cooking_args))
+      set (_cooking_build_command BUILD_COMMAND ${CMAKE_COMMAND} --build <BINARY_DIR>)
+    else ()
+      set (_cooking_build_command "")
+    endif ()
+
+    if (NOT (INSTALL_COMMAND IN_LIST _cooking_args))
+      set (_cooking_install_command INSTALL_COMMAND ${CMAKE_COMMAND} --build <BINARY_DIR> --target install)
+    else ()
+      set (_cooking_install_command "")
+    endif ()
 
     ExternalProject_add (ingredient_${name}
       ${_cooking_source_dir}
       ${_cooking_binary_dir}
-      ${_cooking_build_type}
       ${_cooking_update_command} ""
+      ${_cooking_configure_command}
+      ${_cooking_build_command}
+      ${_cooking_install_command}
       PREFIX ${_cooking_ingredient_dir}
       STAMP_DIR ${_cooking_ingredient_dir}/stamp
       INSTALL_DIR ${_cooking_stow_dir}/${name}
-      CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
       STEP_TARGETS install
+      CMAKE_ARGS ${_cooking_extra_cmake_args}
       "${_cooking_forwarded_args}")
 
     add_custom_command (
