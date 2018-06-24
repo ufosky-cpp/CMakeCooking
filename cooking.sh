@@ -39,7 +39,57 @@ generator="Ninja"
 list_only=""
 
 usage() {
-    echo "Usage: $0 [-r RECIPE] [-g GENERATOR (=${generator})] -d BUILD_DIR (=${build_dir}) -t BUILD_TYPE (=${build_type}) [-h]" 1>&2
+    cat <<EOF
+
+Fetch, configure, build, and install dependencies ("ingredients") for a CMake project
+in a local and repeatable development environment.
+
+Usage: $0 [OPTIONS]
+
+where OPTIONS are:
+
+-r RECIPE
+-d BUILD_DIR (=${build_dir})
+-p INGREDIENTS_DIR (=${build_dir}/_cooking/installed)
+-t BUILD_TYPE (=${build_type})
+-g GENERATOR (=${generator})
+-l
+-h
+
+Option details:
+
+-r RECIPE
+
+    Prepare the named recipe. Recipes are stored in 'recipe/RECIPE.cmake'.
+    If no recipe is indicated, then configure the build without any ingredients.
+
+-d BUILD_DIR (=${build_dir})
+
+   Configure the project and build it in the named directory.
+
+-p INGREDIENTS_DIR (=${build_dir}/_cooking/installed)
+
+   Install compiled ingredients into this directory.
+
+-t BUILD_TYPE (=${build_type})
+
+   Configure all ingredients and the project with the named CMake build-type.
+   An example build type is "Release".
+
+-g GENERATOR (=${generator})
+
+    Use the named CMake generator for building all ingredients and the project.
+    An example generator is "Unix Makfiles".
+
+-l
+
+    Only list available ingredients for a given recipe, and don't do anything else.
+
+-h
+
+    Show this help information and exit.
+
+EOF
 }
 
 while getopts "r:d:p:t:g:lh" arg; do
