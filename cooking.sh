@@ -61,6 +61,8 @@ cat <<'EOF' > "${cmake_dir}/Cooking.cmake"
 # available under the terms of the MIT license.
 
 macro (project name)
+  set (_cooking_dir ${CMAKE_CURRENT_BINARY_DIR}/_cooking)
+
   if (CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
     set (_cooking_root ON)
   else ()
@@ -68,7 +70,7 @@ macro (project name)
   endif ()
 
   set (Cooking_INGREDIENTS_DIR
-    ${CMAKE_CURRENT_BINARY_DIR}/installed_ingredients
+    ${_cooking_dir}/installed
     CACHE
     PATH
     "Directory where ingredients will be installed.")
@@ -81,12 +83,12 @@ macro (project name)
     if (NOT ("${Cooking_RECIPE}" STREQUAL ""))
       add_custom_target (ingredients
         ALL
-        COMMAND cmake -E touch ${CMAKE_CURRENT_BINARY_DIR}/ready.txt)
+        COMMAND cmake -E touch ${_cooking_dir}/ready.txt)
 
       list (APPEND CMAKE_PREFIX_PATH ${Cooking_INGREDIENTS_DIR})
       include ("recipe/${Cooking_RECIPE}.cmake")
 
-      if (NOT EXISTS ${CMAKE_CURRENT_BINARY_DIR}/ready.txt)
+      if (NOT EXISTS ${_cooking_dir}/ready.txt)
         return ()
       endif ()
     endif ()
@@ -95,11 +97,12 @@ endmacro ()
 
 macro (cooking_ingredient name)
   set (_cooking_args "${ARGN}")
+  set (_cooking_ingredient_dir ${_cooking_dir}/ingredient/${name})
 
   if (SOURCE_DIR IN_LIST _cooking_args)
     set (_cooking_source_dir "")
   else ()
-    set (_cooking_source_dir SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/${name}_src)
+    set (_cooking_source_dir SOURCE_DIR ${_cooking_ingredient_dir}/src)
   endif ()
 
   if ("${ARGN}" MATCHES .*CMAKE_BUILD_TYPE.*)
@@ -113,7 +116,9 @@ macro (cooking_ingredient name)
   ExternalProject_add (ingredient_${name}
     ${_cooking_source_dir}
     ${_cooking_build_type}
-    BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/${name}_build
+    PREFIX ${_cooking_ingredient_dir}
+    STAMP_DIR ${_cooking_ingredient_dir}/stamp
+    BINARY_DIR ${_cooking_ingredient_dir}/build
     INSTALL_DIR ${Cooking_INGREDIENTS_DIR}
     CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
     "${ARGN}")
