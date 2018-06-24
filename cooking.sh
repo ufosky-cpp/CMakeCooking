@@ -67,6 +67,12 @@ macro (project name)
     set (root OFF)
   endif ()
 
+  set (Cooking_INGREDIENTS_DIR
+    ${CMAKE_CURRENT_BINARY_DIR}/installed_ingredients
+    CACHE
+    PATH
+    "Directory where ingredients will be installed.")
+
   set (Cooking_RECIPE "" CACHE STRING "Configure ${name}'s dependencies according to the named recipe.")
 
   if (root)
@@ -77,8 +83,7 @@ macro (project name)
         ALL
         COMMAND cmake -E touch ${CMAKE_CURRENT_BINARY_DIR}/ready.txt)
 
-      set (ingredients_dir ${CMAKE_CURRENT_BINARY_DIR}/installed_ingredients)
-      list (APPEND CMAKE_PREFIX_PATH ${ingredients_dir})
+      list (APPEND CMAKE_PREFIX_PATH ${Cooking_INGREDIENTS_DIR})
       include ("recipe/${Cooking_RECIPE}.cmake")
 
       if (NOT EXISTS ${CMAKE_CURRENT_BINARY_DIR}/ready.txt)
@@ -109,7 +114,7 @@ macro (cooking_ingredient name)
     ${source_dir}
     ${build_type}
     BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/${name}_build
-    INSTALL_DIR ${ingredients_dir}
+    INSTALL_DIR ${Cooking_INGREDIENTS_DIR}
     CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
     "${ARGN}")
 
