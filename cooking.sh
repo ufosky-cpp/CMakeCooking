@@ -81,9 +81,15 @@ macro (project name)
     _project (${name} ${ARGN})
 
     if (NOT ("${Cooking_RECIPE}" STREQUAL ""))
-      add_custom_target (ingredients
-        ALL
-        COMMAND cmake -E touch ${_cooking_dir}/ready.txt)
+      add_custom_target (_cooking_ingredients)
+
+      add_custom_command (
+        OUTPUT ${_cooking_dir}/ready.txt
+        DEPENDS _cooking_ingredients
+        COMMAND ${CMAKE_COMMAND} -E touch ${_cooking_dir}/ready.txt)
+
+      add_custom_target (_cooking_ingredients_ready
+        DEPENDS ${_cooking_dir}/ready.txt)
 
       list (APPEND CMAKE_PREFIX_PATH ${Cooking_INGREDIENTS_DIR})
       include ("recipe/${Cooking_RECIPE}.cmake")
@@ -123,7 +129,7 @@ macro (cooking_ingredient name)
     CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
     "${ARGN}")
 
-  add_dependencies (ingredients ingredient_${name})
+  add_dependencies (_cooking_ingredients ingredient_${name})
 endmacro ()
 EOF
 
@@ -132,7 +138,7 @@ cd "${build_dir}"
 
 if [ -n "${recipe}" ]; then
     cmake -DCMAKE_BUILD_TYPE="${build_type}" -DCooking_RECIPE="${recipe}" "${@}" -G "${generator}" "${source_dir}"
-    cmake --build .
+    cmake --build . --target _cooking_ingredients_ready
     cmake .
 else
     cmake -DCMAKE_BUILD_TYPE="${build_type}" "${@}" -G "${generator}" "${source_dir}"
