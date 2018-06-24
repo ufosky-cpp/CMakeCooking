@@ -62,9 +62,9 @@ cat <<'EOF' > "${cmake_dir}/Cooking.cmake"
 
 macro (project name)
   if (CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
-    set (root ON)
+    set (_cooking_root ON)
   else ()
-    set (root OFF)
+    set (_cooking_root OFF)
   endif ()
 
   set (Cooking_INGREDIENTS_DIR
@@ -75,7 +75,7 @@ macro (project name)
 
   set (Cooking_RECIPE "" CACHE STRING "Configure ${name}'s dependencies according to the named recipe.")
 
-  if (root)
+  if (_cooking_root)
     _project (${name} ${ARGN})
 
     if (NOT ("${Cooking_RECIPE}" STREQUAL ""))
@@ -94,25 +94,25 @@ macro (project name)
 endmacro ()
 
 macro (cooking_ingredient name)
-  set (args "${ARGN}")
+  set (_cooking_args "${ARGN}")
 
-  if (SOURCE_DIR IN_LIST args)
-    set (source_dir "")
+  if (SOURCE_DIR IN_LIST _cooking_args)
+    set (_cooking_source_dir "")
   else ()
-    set (source_dir SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/${name}_src)
+    set (_cooking_source_dir SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/${name}_src)
   endif ()
 
   if ("${ARGN}" MATCHES .*CMAKE_BUILD_TYPE.*)
-    set (build_type "")
+    set (_cooking_build_type "")
   else ()
-    set (build_type CMAKE_ARGS -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE})
+    set (_cooking_build_type CMAKE_ARGS -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE})
   endif ()
 
   include (ExternalProject)
 
   ExternalProject_add (ingredient_${name}
-    ${source_dir}
-    ${build_type}
+    ${_cooking_source_dir}
+    ${_cooking_build_type}
     BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/${name}_build
     INSTALL_DIR ${Cooking_INGREDIENTS_DIR}
     CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
