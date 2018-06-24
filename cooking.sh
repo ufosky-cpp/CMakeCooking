@@ -117,7 +117,13 @@ macro (cooking_ingredient name)
     set (_cooking_build_type CMAKE_ARGS -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE})
   endif ()
 
+  add_custom_target (_cooking_ingredient_${name}_post_install
+    DEPENDS ${Cooking_INGREDIENTS_DIR}/.cooking_ingredient_${name})
+
+  add_dependencies (_cooking_ingredients _cooking_ingredient_${name}_post_install)
+
   include (ExternalProject)
+  set (_cooking_stow_dir ${_cooking_dir}/stow)
 
   ExternalProject_add (ingredient_${name}
     ${_cooking_source_dir}
@@ -125,15 +131,32 @@ macro (cooking_ingredient name)
     PREFIX ${_cooking_ingredient_dir}
     STAMP_DIR ${_cooking_ingredient_dir}/stamp
     BINARY_DIR ${_cooking_ingredient_dir}/build
-    INSTALL_DIR ${Cooking_INGREDIENTS_DIR}
+    INSTALL_DIR ${_cooking_stow_dir}/${name}
     CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
+    STEP_TARGETS install
     "${ARGN}")
+
+  add_custom_command (
+    OUTPUT ${Cooking_INGREDIENTS_DIR}/.cooking_ingredient_${name}
+    MAIN_DEPENDENCY ${Cooking_INGREDIENTS_DIR}/.cooking_stamp
+    DEPENDS ingredient_${name}-install
+    COMMAND
+      flock
+      --wait 30
+      ${Cooking_INGREDIENTS_DIR}/.cooking_stow.lock
+      stow
+      -t ${Cooking_INGREDIENTS_DIR}
+      -d ${_cooking_stow_dir}
+      ${name}
+    COMMAND ${CMAKE_COMMAND} -E touch ${Cooking_INGREDIENTS_DIR}/.cooking_ingredient_${name})
 
   add_dependencies (_cooking_ingredients ingredient_${name})
 endmacro ()
 EOF
 
 mkdir -p "${build_dir}"
+mkdir -p "${build_dir}/_cooking/installed"
+touch "${build_dir}"/_cooking/installed/.cooking_stamp
 cd "${build_dir}"
 
 if [ -n "${recipe}" ]; then
