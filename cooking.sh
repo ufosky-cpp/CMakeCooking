@@ -61,7 +61,7 @@ cat <<'EOF' > "${cmake_dir}/Cooking.cmake"
 # available under the terms of the MIT license.
 
 macro (project name)
-  if (${CMAKE_CURRENT_SOURCE_DIR} STREQUAL ${CMAKE_SOURCE_DIR})
+  if (CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
     set (root ON)
   else ()
     set (root OFF)
