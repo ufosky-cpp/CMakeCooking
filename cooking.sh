@@ -218,6 +218,20 @@ cmake -DCMAKE_BUILD_TYPE="${build_type}" "${cmake_cooking_args[@]}" "${@}" -G "$
 cmake --build . --target _cooking_ingredients_ready -- "${build_args[@]}"
 
 #
+# Report what we've done.
+#
+
+ingredients=($(find "${ingredients_dir}" -name '.cooking_ingredient_*' -printf '%f\n' | sed -r 's/\.cooking_ingredient_(.+)/\1/'))
+
+printf "\nCooking: Installed the following ingredients:\n"
+
+for ingredient in "${ingredients[@]}"; do
+    echo "  - ${ingredient}"
+done
+
+printf '\n'
+
+#
 # Configure the project, expecting all requirements satisfied.
 #
 
