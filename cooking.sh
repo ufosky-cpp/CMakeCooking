@@ -33,6 +33,8 @@ source_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 recipe=""
 build_dir="${source_dir}/build"
 build_type="Debug"
+# Depends on `build_dir`.
+ingredients_dir=""
 generator="Ninja"
 list_only=""
 
@@ -40,10 +42,11 @@ usage() {
     echo "Usage: $0 [-r RECIPE] [-g GENERATOR (=${generator})] -d BUILD_DIR (=${build_dir}) -t BUILD_TYPE (=${build_type}) [-h]" 1>&2
 }
 
-while getopts "r:d:t:g:lh" arg; do
+while getopts "r:d:p:t:g:lh" arg; do
     case "${arg}" in
         r) recipe=${OPTARG} ;;
-        d) build_dir=${OPTARG} ;;
+        d) build_dir=$(realpath "${OPTARG}") ;;
+        p) ingredients_dir=$(realpath "${OPTARG}") ;;
         t) build_type=${OPTARG} ;;
         g) generator=${OPTARG} ;;
         l) list_only="1" ;;
@@ -57,8 +60,11 @@ shift $((OPTIND - 1))
 cooking_dir="${build_dir}/_cooking"
 cmake_dir="${source_dir}/cmake"
 cache_file="${build_dir}/CMakeCache.txt"
-ingredients_dir="${cooking_dir}/installed"
 ingredients_ready_file="${cooking_dir}/ready.txt"
+
+if [ -z "${ingredients_dir}" ]; then
+    ingredients_dir="${cooking_dir}/installed"
+fi
 
 mkdir -p "${cmake_dir}"
 
@@ -185,9 +191,6 @@ macro (cooking_ingredient name)
 endmacro ()
 EOF
 
-mkdir -p "${build_dir}"
-cd "${build_dir}"
-
 cmake_cooking_args=(
     "-DCooking_INGREDIENTS_DIR=${ingredients_dir}"
     "-DCooking_RECIPE=${recipe}"
@@ -227,6 +230,9 @@ fi
 #
 # Configure and build ingredients.
 #
+
+mkdir -p "${build_dir}"
+cd "${build_dir}"
 
 declare -a build_args
 
