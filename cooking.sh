@@ -159,6 +159,7 @@ macro (cooking_ingredient name)
   else ()
     include (ExternalProject)
     set (_cooking_stow_dir ${_cooking_dir}/stow)
+    string (REPLACE "<DISABLE>" "" _cooking_forwarded_args "${_cooking_args}")
 
     ExternalProject_add (ingredient_${name}
       ${_cooking_source_dir}
@@ -170,7 +171,7 @@ macro (cooking_ingredient name)
       INSTALL_DIR ${_cooking_stow_dir}/${name}
       CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
       STEP_TARGETS install
-      "${ARGN}")
+      "${_cooking_forwarded_args}")
 
     add_custom_command (
       OUTPUT ${Cooking_INGREDIENTS_DIR}/.cooking_ingredient_${name}
