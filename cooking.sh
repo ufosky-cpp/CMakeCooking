@@ -52,7 +52,12 @@ done
 
 shift $((OPTIND - 1))
 
+cooking_dir="${build_dir}/_cooking"
 cmake_dir="${source_dir}/cmake"
+cache_file="${build_dir}/CMakeCache.txt"
+ingredients_dir="${cooking_dir}/installed"
+ingredients_ready_file="${cooking_dir}/ready.txt"
+
 mkdir -p "${cmake_dir}"
 
 cat <<'EOF' > "${cmake_dir}/Cooking.cmake"
@@ -155,14 +160,47 @@ endmacro ()
 EOF
 
 mkdir -p "${build_dir}"
-mkdir -p "${build_dir}/_cooking/installed"
-touch "${build_dir}"/_cooking/installed/.cooking_stamp
 cd "${build_dir}"
 
-if [ -n "${recipe}" ]; then
-    cmake -DCMAKE_BUILD_TYPE="${build_type}" -DCooking_RECIPE="${recipe}" "${@}" -G "${generator}" "${source_dir}"
-    cmake --build . --target _cooking_ingredients_ready
-    cmake .
-else
-    cmake -DCMAKE_BUILD_TYPE="${build_type}" "${@}" -G "${generator}" "${source_dir}"
+cmake_cooking_args=(
+    "-DCooking_INGREDIENTS_DIR=${ingredients_dir}"
+    "-DCooking_RECIPE=${recipe}"
+)
+
+#
+# Clean-up from a previous run.
+#
+
+if [ -e "${ingredients_ready_file}" ]; then
+    rm "${ingredients_ready_file}"
 fi
+
+if [ -e "${cache_file}" ]; then
+    rm "${cache_file}"
+fi
+
+if [ -d "${ingredients_dir}" ]; then
+    rm -r --preserve-root "${ingredients_dir}"
+fi
+
+mkdir -p "${ingredients_dir}"
+touch "${ingredients_dir}/.cooking_stamp"
+
+#
+# Configure and build ingredients.
+#
+
+declare -a build_args
+
+if [ "${generator}" == "Ninja" ]; then
+    build_args+=(-v)
+fi
+
+cmake -DCMAKE_BUILD_TYPE="${build_type}" "${cmake_cooking_args[@]}" "${@}" -G "${generator}" "${source_dir}"
+cmake --build . --target _cooking_ingredients_ready -- "${build_args[@]}"
+
+#
+# Configure the project, expecting all requirements satisfied.
+#
+
+cmake -DCMAKE_FIND_PACKAGE_NO_PACKAGE_REGISTRY=ON .
