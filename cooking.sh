@@ -37,6 +37,7 @@ build_type="Debug"
 ingredients_dir=""
 generator="Ninja"
 list_only=""
+nested=""
 
 usage() {
     cat <<EOF
@@ -92,7 +93,7 @@ Option details:
 EOF
 }
 
-while getopts "r:d:p:t:g:lh" arg; do
+while getopts "r:d:p:t:g:lhx" arg; do
     case "${arg}" in
         r) recipe=${OPTARG} ;;
         d) build_dir=$(realpath "${OPTARG}") ;;
@@ -101,6 +102,7 @@ while getopts "r:d:p:t:g:lh" arg; do
         g) generator=${OPTARG} ;;
         l) list_only="1" ;;
         h) usage; exit 0 ;;
+        x) nested="1" ;;
         *) usage; exit 1 ;;
     esac
 done
@@ -186,7 +188,7 @@ macro (cooking_ingredient name)
     cmake_parse_arguments (
       _cooking_parsed_args
       ""
-      ""
+      "COOKING_RECIPE"
       "CMAKE_ARGS"
       ${_cooking_args})
 
@@ -219,12 +221,23 @@ macro (cooking_ingredient name)
       list (APPEND _cooking_extra_cmake_args -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE})
     endif ()
 
-    if (NOT (CONFIGURE_COMMAND IN_LIST _cooking_args))
+    if (_cooking_parsed_args_COOKING_RECIPE)
+      set (_cooking_configure_command
+        CONFIGURE_COMMAND
+        <SOURCE_DIR>/cooking.sh
+        -r ${_cooking_parsed_args_COOKING_RECIPE}
+        -d <BINARY_DIR>
+        -p ${Cooking_INGREDIENTS_DIR}
+        -x
+        --
+        ${_cooking_extra_cmake_args}
+        ${_cooking_parsed_args_CMAKE_ARGS})
+    elseif (NOT (CONFIGURE_COMMAND IN_LIST _cooking_args))
       set (_cooking_configure_command
         CONFIGURE_COMMAND
         ${CMAKE_COMMAND}
-        ${_cooking_parsed_args_CMAKE_ARGS}
         ${_cooking_extra_cmake_args}
+        ${_cooking_parsed_args_CMAKE_ARGS}
         <SOURCE_DIR>)
     else ()
       set (_cooking_configure_command "")
@@ -255,6 +268,13 @@ macro (cooking_ingredient name)
       STEP_TARGETS install
       CMAKE_ARGS ${_cooking_extra_cmake_args}
       "${_cooking_forwarded_args}")
+
+    if (_cooking_parsed_args_COOKING_RECIPE)
+      ExternalProject_add_step (ingredient_${name}
+        cooking-reconfigure
+        DEPENDS ${Cooking_INGREDIENTS_DIR}/.cooking_stamp
+        DEPENDERS configure)
+    endif ()
 
     add_custom_command (
       OUTPUT ${Cooking_INGREDIENTS_DIR}/.cooking_ingredient_${name}
@@ -292,7 +312,7 @@ if [ -e "${cache_file}" ]; then
     rm "${cache_file}"
 fi
 
-if [ -d "${ingredients_dir}" ]; then
+if [ -d "${ingredients_dir}" -a -z "${nested}" ]; then
     rm -r --preserve-root "${ingredients_dir}"
 fi
 
@@ -332,25 +352,27 @@ cmake -DCMAKE_BUILD_TYPE="${build_type}" "${cmake_cooking_args[@]}" "${@}" -G "$
 cmake --build . --target _cooking_ingredients_ready -- "${build_args[@]}"
 
 #
-# Report what we've done.
+# Report what we've done (if we're not nested).
 #
 
-ingredients=($(find "${ingredients_dir}" -name '.cooking_ingredient_*' -printf '%f\n' | sed -r 's/\.cooking_ingredient_(.+)/\1/'))
+if [ -z "${nested}" ]; then
+    ingredients=($(find "${ingredients_dir}" -name '.cooking_ingredient_*' -printf '%f\n' | sed -r 's/\.cooking_ingredient_(.+)/\1/'))
 
-if [ -z "${list_only}" ]; then
-    printf "\nCooking: Installed the following ingredients:\n"
-else
-    printf "\nCooking: The following ingredients are necessary for this recipe:\n"
-fi
+    if [ -z "${list_only}" ]; then
+        printf "\nCooking: Installed the following ingredients:\n"
+    else
+        printf "\nCooking: The following ingredients are necessary for this recipe:\n"
+    fi
 
-for ingredient in "${ingredients[@]}"; do
-    echo "  - ${ingredient}"
-done
+    for ingredient in "${ingredients[@]}"; do
+        echo "  - ${ingredient}"
+    done
 
-printf '\n'
+    printf '\n'
 
-if [ -n "${list_only}" ]; then
-    exit 0
+    if [ -n "${list_only}" ]; then
+        exit 0
+    fi
 fi
 
 #
