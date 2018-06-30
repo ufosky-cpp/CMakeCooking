@@ -34,17 +34,19 @@ recipe=""
 build_dir="${source_dir}/build"
 build_type="Debug"
 generator="Ninja"
+list_only=""
 
 usage() {
     echo "Usage: $0 [-r RECIPE] [-g GENERATOR (=${generator})] -d BUILD_DIR (=${build_dir}) -t BUILD_TYPE (=${build_type}) [-h]" 1>&2
 }
 
-while getopts "r:g:d:t:h" arg; do
+while getopts "r:g:d:t:lh" arg; do
     case "${arg}" in
         r) recipe=${OPTARG} ;;
         g) generator=${OPTARG} ;;
         d) build_dir=${OPTARG} ;;
         t) build_type=${OPTARG} ;;
+        l) list_only="1" ;;
         h) usage; exit 0 ;;
         *) usage; exit 1 ;;
     esac
@@ -79,6 +81,10 @@ macro (project name)
     CACHE
     PATH
     "Directory where ingredients will be installed.")
+
+  option (Cooking_LIST_ONLY
+    "Available ingredients will be listed and nothing will be installed."
+    OFF)
 
   set (Cooking_RECIPE "" CACHE STRING "Configure ${name}'s dependencies according to the named recipe.")
 
@@ -139,36 +145,43 @@ macro (cooking_ingredient name)
 
   add_dependencies (_cooking_ingredients _cooking_ingredient_${name}_post_install)
 
-  include (ExternalProject)
-  set (_cooking_stow_dir ${_cooking_dir}/stow)
+  if (Cooking_LIST_ONLY)
+    add_custom_command (
+      OUTPUT ${Cooking_INGREDIENTS_DIR}/.cooking_ingredient_${name}
+      MAIN_DEPENDENCY ${Cooking_INGREDIENTS_DIR}/.cooking_stamp
+      COMMAND ${CMAKE_COMMAND} -E touch ${Cooking_INGREDIENTS_DIR}/.cooking_ingredient_${name})
+  else ()
+    include (ExternalProject)
+    set (_cooking_stow_dir ${_cooking_dir}/stow)
 
-  ExternalProject_add (ingredient_${name}
-    ${_cooking_source_dir}
-    ${_cooking_binary_dir}
-    ${_cooking_build_type}
-    ${_cooking_update_command} ""
-    PREFIX ${_cooking_ingredient_dir}
-    STAMP_DIR ${_cooking_ingredient_dir}/stamp
-    INSTALL_DIR ${_cooking_stow_dir}/${name}
-    CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
-    STEP_TARGETS install
-    "${ARGN}")
+    ExternalProject_add (ingredient_${name}
+      ${_cooking_source_dir}
+      ${_cooking_binary_dir}
+      ${_cooking_build_type}
+      ${_cooking_update_command} ""
+      PREFIX ${_cooking_ingredient_dir}
+      STAMP_DIR ${_cooking_ingredient_dir}/stamp
+      INSTALL_DIR ${_cooking_stow_dir}/${name}
+      CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
+      STEP_TARGETS install
+      "${ARGN}")
 
-  add_custom_command (
-    OUTPUT ${Cooking_INGREDIENTS_DIR}/.cooking_ingredient_${name}
-    MAIN_DEPENDENCY ${Cooking_INGREDIENTS_DIR}/.cooking_stamp
-    DEPENDS ingredient_${name}-install
-    COMMAND
-      flock
-      --wait 30
-      ${Cooking_INGREDIENTS_DIR}/.cooking_stow.lock
-      stow
-      -t ${Cooking_INGREDIENTS_DIR}
-      -d ${_cooking_stow_dir}
-      ${name}
-    COMMAND ${CMAKE_COMMAND} -E touch ${Cooking_INGREDIENTS_DIR}/.cooking_ingredient_${name})
+    add_custom_command (
+      OUTPUT ${Cooking_INGREDIENTS_DIR}/.cooking_ingredient_${name}
+      MAIN_DEPENDENCY ${Cooking_INGREDIENTS_DIR}/.cooking_stamp
+      DEPENDS ingredient_${name}-install
+      COMMAND
+        flock
+        --wait 30
+        ${Cooking_INGREDIENTS_DIR}/.cooking_stow.lock
+        stow
+        -t ${Cooking_INGREDIENTS_DIR}
+        -d ${_cooking_stow_dir}
+        ${name}
+      COMMAND ${CMAKE_COMMAND} -E touch ${Cooking_INGREDIENTS_DIR}/.cooking_ingredient_${name})
 
-  add_dependencies (_cooking_ingredients ingredient_${name})
+    add_dependencies (_cooking_ingredients ingredient_${name})
+  endif ()
 endmacro ()
 EOF
 
@@ -221,6 +234,10 @@ if [ "${generator}" == "Ninja" ]; then
     build_args+=(-v)
 fi
 
+if [ -n "${list_only}" ]; then
+    cmake_cooking_args+=("-DCooking_LIST_ONLY=ON")
+fi
+
 cmake -DCMAKE_BUILD_TYPE="${build_type}" "${cmake_cooking_args[@]}" "${@}" -G "${generator}" "${source_dir}"
 cmake --build . --target _cooking_ingredients_ready -- "${build_args[@]}"
 
@@ -230,13 +247,21 @@ cmake --build . --target _cooking_ingredients_ready -- "${build_args[@]}"
 
 ingredients=($(find "${ingredients_dir}" -name '.cooking_ingredient_*' -printf '%f\n' | sed -r 's/\.cooking_ingredient_(.+)/\1/'))
 
-printf "\nCooking: Installed the following ingredients:\n"
+if [ -z "${list_only}" ]; then
+    printf "\nCooking: Installed the following ingredients:\n"
+else
+    printf "\nCooking: The following ingredients are necessary for this recipe:\n"
+fi
 
 for ingredient in "${ingredients[@]}"; do
     echo "  - ${ingredient}"
 done
 
 printf '\n'
+
+if [ -n "${list_only}" ]; then
+    exit 0
+fi
 
 #
 # Configure the project, expecting all requirements satisfied.
