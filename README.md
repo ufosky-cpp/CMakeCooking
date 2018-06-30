@@ -37,10 +37,6 @@ Instead of running `cmake` to configure the project, run `cooking.sh`. This will
  - If a recipe is included (with the `-r` option) then fetch, configure, and build all dependencies of the project
  - Configure the project
 
-# Examples
-
-The [CMakeWorkflows](https://github.com/hakuch/CMakeWorkflows) repository describes in some depth a work-flow with `cmake-cooking`. You may also be interested in the CMake specification of the [Pretty](https://github.com/hakuch/Pretty) and [Snake](https://github.com/hakuch/Snake) projects for reference.
-
 # References
 
 - ["Effective CMake" from C++Now 2017](https://www.youtube.com/watch?v=bsXLMQ6WgIk)
