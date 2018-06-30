@@ -11,6 +11,10 @@ A modern CMake project should allow its dependencies to be satisfied arbitrarily
 
 `cmake-cooking` is similar to the  "superbuild" concept (in CMake-parlance). Its implementation wraps the `ExternalProject` module included in CMake.
 
+## Dependencies
+
+- [GNU Stow](https://www.gnu.org/software/stow/)
+
 ## Usage
 
 Simply copy `cooking.sh` into your project's root source directory.
