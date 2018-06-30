@@ -34,7 +34,7 @@ Instead of running `cmake` to configure the project, run `cooking.sh`. This will
 
  - Generate `cmake/Cooking.cmake` in the source directory. This file should **not** be tracked in version control
  - Create the build directory
- - If a recipe is included (with the `-r option) then fetch, configure, and build all dependencies of the project
+ - If a recipe is included (with the `-r` option) then fetch, configure, and build all dependencies of the project
  - Configure the project
 
 # Examples
