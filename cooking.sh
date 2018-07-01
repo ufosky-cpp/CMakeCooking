@@ -336,6 +336,8 @@ fi
 #
 
 mkdir -p "${build_dir}"
+mkdir -p "${cooking_dir}"/stow
+touch "${cooking_dir}"/stow/.stow
 cd "${build_dir}"
 
 declare -a build_args
