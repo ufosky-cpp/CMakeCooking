@@ -496,7 +496,7 @@ if [ -n "${list_only}" ]; then
     cmake_cooking_args+=("-DCooking_LIST_ONLY=ON")
 fi
 
-cmake -DCMAKE_BUILD_TYPE="${build_type}" "${cmake_cooking_args[@]}" "${@}" -G "${generator}" "${source_dir}"
+cmake -DCMAKE_BUILD_TYPE="${build_type}" "${cmake_cooking_args[@]}" -G "${generator}" "${source_dir}"
 cmake --build . --target _cooking_ingredients_ready -- "${build_args[@]}"
 
 #
@@ -527,4 +527,4 @@ fi
 # Configure the project, expecting all requirements satisfied.
 #
 
-cmake -DCMAKE_FIND_PACKAGE_NO_PACKAGE_REGISTRY=ON .
+cmake -DCMAKE_FIND_PACKAGE_NO_PACKAGE_REGISTRY=ON "${@}" .
