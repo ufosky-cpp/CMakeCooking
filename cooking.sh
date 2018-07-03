@@ -31,6 +31,8 @@ set -e
 source_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 recipe=""
+excluded_ingredients=""
+included_ingredients=""
 build_dir="${source_dir}/build"
 build_type="Debug"
 # Depends on `build_dir`.
@@ -50,6 +52,8 @@ Usage: $0 [OPTIONS]
 where OPTIONS are:
 
 -r RECIPE
+-e INGREDIENT[;INGREDIENT[;...]]
+-i INGREDIENT[;INGREDIENT[;...]]
 -d BUILD_DIR (=${build_dir})
 -p INGREDIENTS_DIR (=${build_dir}/_cooking/installed)
 -t BUILD_TYPE (=${build_type})
@@ -57,12 +61,47 @@ where OPTIONS are:
 -l
 -h
 
+If neither [-i] nor [-e] are specified with a recipe ([-r]), then all ingredients of the recipe
+will be fetched and built.
+
+[-i] and [-e] are mutually-exclusive options: only provide one.
+
 Option details:
 
 -r RECIPE
 
     Prepare the named recipe. Recipes are stored in 'recipe/RECIPE.cmake'.
     If no recipe is indicated, then configure the build without any ingredients.
+
+-e INGREDIENT[;INGREDIENT[;...]]
+
+    Exclude a list semicolon-separated list of ingredients from a recipe.
+
+    For example, if a recipe consists of 'apple', 'banana', 'carrot', and 'donut', then
+
+        ./cooking.sh -r dev -e 'apple;donut'
+
+    will prepare 'banana' and 'carrot' but not prepare 'apple' and 'donut'.
+
+    If an ingredient is excluded, then it is assumed that all ingredients that depend on it
+    can satisfy that dependency in some other way from the system (ie, the dependency is
+    removed internally).
+
+-i INGREDIENT[;INGREDIENT[;...]]
+
+   Include a list of semicolon-separated ingredients from a recipe, ignoring the others.
+
+   Similar to [-e], but the opposite.
+
+   For example, if a recipe consists of 'apple', 'banana', 'carrot', and 'donut' then
+
+       ./cooking.sh -r dev -i 'apple;donut'
+
+   will prepare 'apple' and 'donut' but not prepare 'banana' and 'carrot'.
+
+   If an ingredient is not in the "include-list", then it is assumed that all
+   ingredients that are in the list and which depend on it can satisfy that dependency
+   in some other way from the system.
 
 -d BUILD_DIR (=${build_dir})
 
@@ -93,9 +132,29 @@ Option details:
 EOF
 }
 
-while getopts "r:d:p:t:g:lhx" arg; do
+yell_include_exclude_mutually_exclusive() {
+    echo "[-e] and [-i] are mutually exclusive options!"1>&2
+}
+
+while getopts "r:e:i:d:p:t:g:lhx" arg; do
     case "${arg}" in
         r) recipe=${OPTARG} ;;
+        e)
+            if [[ -n "${included_ingredients}" ]]; then
+                yell_include_exclude_mutually_exclusive
+                exit 1
+            fi
+
+            excluded_ingredients=${OPTARG}
+            ;;
+        i)
+            if [[ -n "${excluded_ingredients}" ]]; then
+                yell_include_exclude_mutually_exclusive
+                exit 1
+            fi
+
+            included_ingredients=${OPTARG}
+            ;;
         d) build_dir=$(realpath "${OPTARG}") ;;
         p) ingredients_dir=$(realpath "${OPTARG}") ;;
         t) build_type=${OPTARG} ;;
@@ -140,11 +199,41 @@ macro (project name)
     PATH
     "Directory where ingredients will be installed.")
 
+  set (Cooking_EXCLUDED_INGREDIENTS
+   ""
+   CACHE
+   STRING
+   "Semicolon-separated list of ingredients that are not provided by Cooking.")
+
+  set (Cooking_INCLUDED_INGREDIENTS
+   ""
+   CACHE
+   STRING
+   "Semicolon-separated list of ingredients that are provided by Cooking.")
+
   option (Cooking_LIST_ONLY
     "Available ingredients will be listed and nothing will be installed."
     OFF)
 
   set (Cooking_RECIPE "" CACHE STRING "Configure ${name}'s dependencies according to the named recipe.")
+
+  if ((NOT DEFINED Cooking_EXCLUDED_INGREDIENTS) OR (Cooking_EXCLUDED_INGREDIENTS STREQUAL ""))
+    set (_cooking_excluding OFF)
+  else ()
+    set (_cooking_excluding ON)
+  endif ()
+
+  if ((NOT DEFINED Cooking_INCLUDED_INGREDIENTS) OR (Cooking_INCLUDED_INGREDIENTS STREQUAL ""))
+    set (_cooking_including OFF)
+  else ()
+    set (_cooking_including ON)
+  endif ()
+
+  if (_cooking_excluding AND _cooking_including)
+    message (
+      FATAL_ERROR
+      "Cooking: The EXCLUDED_INGREDIENTS and INCLUDED_INGREDIENTS lists are mutually exclusive options!")
+  endif ()
 
   if (_cooking_root)
     _project (${name} ${ARGN})
@@ -170,127 +259,166 @@ macro (project name)
   endif ()
 endmacro ()
 
+set (_cooking_ingredient_name_pattern "([a-zA-Z][a-zA-Z0-9\-_]+)")
+
+function (_cooking_prefix_ingredients var input)
+  string (REGEX REPLACE
+    ${_cooking_ingredient_name_pattern}
+    ingredient_\\0
+    result
+    "${input}")
+
+  set (${var} ${result} PARENT_SCOPE)
+endfunction ()
+
+_cooking_prefix_ingredients (
+  _cooking_excluded_ingredients_prefixed
+  "${Cooking_EXCLUDED_INGREDIENTS}")
+
+_cooking_prefix_ingredients (
+  _cooking_included_ingredients_prefixed
+  "${Cooking_INCLUDED_INGREDIENTS}")
+
 macro (cooking_ingredient name)
   set (_cooking_args "${ARGN}")
-  set (_cooking_ingredient_dir ${_cooking_dir}/ingredient/${name})
 
-  add_custom_target (_cooking_ingredient_${name}_post_install
-    DEPENDS ${Cooking_INGREDIENTS_DIR}/.cooking_ingredient_${name})
+  if (_cooking_excluding)
+    # Strip out any dependencies that are excluded.
+    list (REMOVE_ITEM _cooking_args "${_cooking_excluded_ingredients_prefixed}")
+  elseif (_cooking_including)
+    # Eliminate dependencies that have not been included.
+    foreach (x IN LISTS _cooking_args)
+      if (("${x}" MATCHES ingredient_${_cooking_ingredient_name_pattern})
+          AND NOT ("${x}" IN_LIST Cooking_INCLUDED_INGREDIENTS))
+        list (REMOVE_ITEM _cooking_args ${x})
+      endif ()
+    endforeach ()
+  endif ()
 
-  add_dependencies (_cooking_ingredients _cooking_ingredient_${name}_post_install)
-
-  if (Cooking_LIST_ONLY)
-    add_custom_command (
-      OUTPUT ${Cooking_INGREDIENTS_DIR}/.cooking_ingredient_${name}
-      MAIN_DEPENDENCY ${Cooking_INGREDIENTS_DIR}/.cooking_stamp
-      COMMAND ${CMAKE_COMMAND} -E touch ${Cooking_INGREDIENTS_DIR}/.cooking_ingredient_${name})
+  if ((_cooking_excluding AND (${name} IN_LIST Cooking_EXCLUDED_INGREDIENTS))
+      OR (_cooking_including AND (NOT (${name} IN_LIST Cooking_INCLUDED_INGREDIENTS))))
+    # Nothing.
   else ()
-    cmake_parse_arguments (
-      _cooking_parsed_args
-      ""
-      "COOKING_RECIPE"
-      "CMAKE_ARGS"
-      ${_cooking_args})
+    set (_cooking_ingredient_dir ${_cooking_dir}/ingredient/${name})
 
-    include (ExternalProject)
-    set (_cooking_stow_dir ${_cooking_dir}/stow)
-    string (REPLACE "<DISABLE>" "" _cooking_forwarded_args "${_cooking_parsed_args_UNPARSED_ARGUMENTS}")
+    add_custom_target (_cooking_ingredient_${name}_post_install
+      DEPENDS ${Cooking_INGREDIENTS_DIR}/.cooking_ingredient_${name})
 
-    if (NOT (SOURCE_DIR IN_LIST _cooking_args))
-      set (_cooking_source_dir SOURCE_DIR ${_cooking_ingredient_dir}/src)
+    add_dependencies (_cooking_ingredients _cooking_ingredient_${name}_post_install)
+
+    if (Cooking_LIST_ONLY)
+      add_custom_command (
+        OUTPUT ${Cooking_INGREDIENTS_DIR}/.cooking_ingredient_${name}
+        MAIN_DEPENDENCY ${Cooking_INGREDIENTS_DIR}/.cooking_stamp
+        COMMAND ${CMAKE_COMMAND} -E touch ${Cooking_INGREDIENTS_DIR}/.cooking_ingredient_${name})
     else ()
-      set (_cooking_source_dir "")
+      cmake_parse_arguments (
+        _cooking_parsed_args
+        ""
+        "COOKING_RECIPE"
+        "CMAKE_ARGS"
+        ${_cooking_args})
+
+      include (ExternalProject)
+      set (_cooking_stow_dir ${_cooking_dir}/stow)
+      string (REPLACE "<DISABLE>" "" _cooking_forwarded_args "${_cooking_parsed_args_UNPARSED_ARGUMENTS}")
+
+      if (NOT (SOURCE_DIR IN_LIST _cooking_args))
+        set (_cooking_source_dir SOURCE_DIR ${_cooking_ingredient_dir}/src)
+      else ()
+        set (_cooking_source_dir "")
+      endif ()
+
+      if (NOT ((BUILD_IN_SOURCE IN_LIST _cooking_args) OR (BINARY_DIR IN_LIST _cooking_args)))
+        set (_cooking_binary_dir BINARY_DIR ${_cooking_ingredient_dir}/build)
+      else ()
+        set (_cooking_binary_dir "")
+      endif ()
+
+      if (NOT (UPDATE_COMMAND IN_LIST _cooking_args))
+        set (_cooking_update_command UPDATE_COMMAND)
+      else ()
+        set (_cooking_update_command "")
+      endif ()
+
+      set (_cooking_extra_cmake_args
+        -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>)
+
+      if (NOT ("${ARGN}" MATCHES .*CMAKE_BUILD_TYPE.*))
+        list (APPEND _cooking_extra_cmake_args -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE})
+      endif ()
+
+      if (_cooking_parsed_args_COOKING_RECIPE)
+        set (_cooking_configure_command
+          CONFIGURE_COMMAND
+          <SOURCE_DIR>/cooking.sh
+          -r ${_cooking_parsed_args_COOKING_RECIPE}
+          -d <BINARY_DIR>
+          -p ${Cooking_INGREDIENTS_DIR}
+          -x
+          --
+          ${_cooking_extra_cmake_args}
+          ${_cooking_parsed_args_CMAKE_ARGS})
+      elseif (NOT (CONFIGURE_COMMAND IN_LIST _cooking_args))
+        set (_cooking_configure_command
+          CONFIGURE_COMMAND
+          ${CMAKE_COMMAND}
+          ${_cooking_extra_cmake_args}
+          ${_cooking_parsed_args_CMAKE_ARGS}
+          <SOURCE_DIR>)
+      else ()
+        set (_cooking_configure_command "")
+      endif ()
+
+      if (NOT (BUILD_COMMAND IN_LIST _cooking_args))
+        set (_cooking_build_command BUILD_COMMAND ${CMAKE_COMMAND} --build <BINARY_DIR>)
+      else ()
+        set (_cooking_build_command "")
+      endif ()
+
+      if (NOT (INSTALL_COMMAND IN_LIST _cooking_args))
+        set (_cooking_install_command INSTALL_COMMAND ${CMAKE_COMMAND} --build <BINARY_DIR> --target install)
+      else ()
+        set (_cooking_install_command "")
+      endif ()
+
+      ExternalProject_add (ingredient_${name}
+        ${_cooking_source_dir}
+        ${_cooking_binary_dir}
+        ${_cooking_update_command} ""
+        ${_cooking_configure_command}
+        ${_cooking_build_command}
+        ${_cooking_install_command}
+        PREFIX ${_cooking_ingredient_dir}
+        STAMP_DIR ${_cooking_ingredient_dir}/stamp
+        INSTALL_DIR ${_cooking_stow_dir}/${name}
+        STEP_TARGETS install
+        CMAKE_ARGS ${_cooking_extra_cmake_args}
+        "${_cooking_forwarded_args}")
+
+      if (_cooking_parsed_args_COOKING_RECIPE)
+        ExternalProject_add_step (ingredient_${name}
+          cooking-reconfigure
+          DEPENDS ${Cooking_INGREDIENTS_DIR}/.cooking_stamp
+          DEPENDERS configure)
+      endif ()
+
+      add_custom_command (
+        OUTPUT ${Cooking_INGREDIENTS_DIR}/.cooking_ingredient_${name}
+        MAIN_DEPENDENCY ${Cooking_INGREDIENTS_DIR}/.cooking_stamp
+        DEPENDS ingredient_${name}-install
+        COMMAND
+          flock
+          --wait 30
+          ${Cooking_INGREDIENTS_DIR}/.cooking_stow.lock
+          stow
+          -t ${Cooking_INGREDIENTS_DIR}
+          -d ${_cooking_stow_dir}
+          ${name}
+        COMMAND ${CMAKE_COMMAND} -E touch ${Cooking_INGREDIENTS_DIR}/.cooking_ingredient_${name})
+
+      add_dependencies (_cooking_ingredients ingredient_${name})
     endif ()
-
-    if (NOT ((BUILD_IN_SOURCE IN_LIST _cooking_args) OR (BINARY_DIR IN_LIST _cooking_args)))
-      set (_cooking_binary_dir BINARY_DIR ${_cooking_ingredient_dir}/build)
-    else ()
-      set (_cooking_binary_dir "")
-    endif ()
-
-    if (NOT (UPDATE_COMMAND IN_LIST _cooking_args))
-      set (_cooking_update_command UPDATE_COMMAND)
-    else ()
-      set (_cooking_update_command "")
-    endif ()
-
-    set (_cooking_extra_cmake_args
-      -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>)
-
-    if (NOT ("${ARGN}" MATCHES .*CMAKE_BUILD_TYPE.*))
-      list (APPEND _cooking_extra_cmake_args -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE})
-    endif ()
-
-    if (_cooking_parsed_args_COOKING_RECIPE)
-      set (_cooking_configure_command
-        CONFIGURE_COMMAND
-        <SOURCE_DIR>/cooking.sh
-        -r ${_cooking_parsed_args_COOKING_RECIPE}
-        -d <BINARY_DIR>
-        -p ${Cooking_INGREDIENTS_DIR}
-        -x
-        --
-        ${_cooking_extra_cmake_args}
-        ${_cooking_parsed_args_CMAKE_ARGS})
-    elseif (NOT (CONFIGURE_COMMAND IN_LIST _cooking_args))
-      set (_cooking_configure_command
-        CONFIGURE_COMMAND
-        ${CMAKE_COMMAND}
-        ${_cooking_extra_cmake_args}
-        ${_cooking_parsed_args_CMAKE_ARGS}
-        <SOURCE_DIR>)
-    else ()
-      set (_cooking_configure_command "")
-    endif ()
-
-    if (NOT (BUILD_COMMAND IN_LIST _cooking_args))
-      set (_cooking_build_command BUILD_COMMAND ${CMAKE_COMMAND} --build <BINARY_DIR>)
-    else ()
-      set (_cooking_build_command "")
-    endif ()
-
-    if (NOT (INSTALL_COMMAND IN_LIST _cooking_args))
-      set (_cooking_install_command INSTALL_COMMAND ${CMAKE_COMMAND} --build <BINARY_DIR> --target install)
-    else ()
-      set (_cooking_install_command "")
-    endif ()
-
-    ExternalProject_add (ingredient_${name}
-      ${_cooking_source_dir}
-      ${_cooking_binary_dir}
-      ${_cooking_update_command} ""
-      ${_cooking_configure_command}
-      ${_cooking_build_command}
-      ${_cooking_install_command}
-      PREFIX ${_cooking_ingredient_dir}
-      STAMP_DIR ${_cooking_ingredient_dir}/stamp
-      INSTALL_DIR ${_cooking_stow_dir}/${name}
-      STEP_TARGETS install
-      CMAKE_ARGS ${_cooking_extra_cmake_args}
-      "${_cooking_forwarded_args}")
-
-    if (_cooking_parsed_args_COOKING_RECIPE)
-      ExternalProject_add_step (ingredient_${name}
-        cooking-reconfigure
-        DEPENDS ${Cooking_INGREDIENTS_DIR}/.cooking_stamp
-        DEPENDERS configure)
-    endif ()
-
-    add_custom_command (
-      OUTPUT ${Cooking_INGREDIENTS_DIR}/.cooking_ingredient_${name}
-      MAIN_DEPENDENCY ${Cooking_INGREDIENTS_DIR}/.cooking_stamp
-      DEPENDS ingredient_${name}-install
-      COMMAND
-        flock
-        --wait 30
-        ${Cooking_INGREDIENTS_DIR}/.cooking_stow.lock
-        stow
-        -t ${Cooking_INGREDIENTS_DIR}
-        -d ${_cooking_stow_dir}
-        ${name}
-      COMMAND ${CMAKE_COMMAND} -E touch ${Cooking_INGREDIENTS_DIR}/.cooking_ingredient_${name})
-
-    add_dependencies (_cooking_ingredients ingredient_${name})
   endif ()
 endmacro ()
 EOF
@@ -329,6 +457,24 @@ if [ -n "${recipe}" ]; then
     if [ ! -f "${recipe_file}" ]; then
         echo "Cooking: The '${recipe}' recipe does not exist!" && exit 1
     fi
+fi
+
+#
+# Prepare lists of included and excluded ingredients.
+#
+
+if [ -n "${excluded_ingredients}" ] && [ -z "${list_only}" ]; then
+    cmake_cooking_args+=(
+        "-DCooking_EXCLUDED_INGREDIENTS=${excluded_ingredients}"
+        "-DCooking_INCLUDED_INGREDIENTS="
+    )
+fi
+
+if [ -n "${included_ingredients}" ] && [ -z "${list_only}" ]; then
+    cmake_cooking_args+=(
+        "-DCooking_EXCLUDED_INGREDIENTS="
+        "-DCooking_INCLUDED_INGREDIENTS=${included_ingredients}"
+    )
 fi
 
 #
