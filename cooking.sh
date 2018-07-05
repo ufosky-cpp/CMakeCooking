@@ -327,7 +327,7 @@ macro (cooking_ingredient name)
         _cooking_parsed_args
         ""
         "COOKING_RECIPE"
-        "CMAKE_ARGS"
+        "CMAKE_ARGS;COOKING_INCLUDE;COOKING_EXCLUDE"
         ${_cooking_args})
 
       include (ExternalProject)
@@ -360,6 +360,16 @@ macro (cooking_ingredient name)
       endif ()
 
       if (_cooking_parsed_args_COOKING_RECIPE)
+        set (_cooking_include_exclude_args "")
+
+        foreach (i ${_cooking_parsed_args_COOKING_INCLUDE})
+          list (APPEND _cooking_include_exclude_args -i ${i})
+        endforeach ()
+
+        foreach (e ${_cooking_parsed_args_COOKING_EXCLUDE})
+          list (APPEND _cooking_include_exclude_args -e ${e})
+        endforeach ()
+
         set (_cooking_configure_command
           CONFIGURE_COMMAND
           <SOURCE_DIR>/cooking.sh
@@ -367,6 +377,7 @@ macro (cooking_ingredient name)
           -d <BINARY_DIR>
           -p ${Cooking_INGREDIENTS_DIR}
           -x
+          ${_cooking_include_exclude_args}
           --
           ${_cooking_extra_cmake_args}
           ${_cooking_parsed_args_CMAKE_ARGS})
