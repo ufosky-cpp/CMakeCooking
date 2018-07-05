@@ -199,6 +199,10 @@ macro (project name)
     stow
     "Executable path of GNU Stow.")
 
+  if (NOT Cooking_STOW_EXECUTABLE)
+    message (FATAL_ERROR "Cooking: GNU Stow is required!")
+  endif ()
+
   set (Cooking_INGREDIENTS_DIR
     ${_cooking_dir}/installed
     CACHE
