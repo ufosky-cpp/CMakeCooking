@@ -1,3 +1,17 @@
+v0.4.0
+------
+2018-07-05
+
+- Add the `Cooking_INGREDIENTS_DIR` cache variable.
+- Prefix all local variables in macro definitions to avoid conflicts.
+- Use GNU Stow to install ingredients to avoid copying files gratuitously.
+- Allow available ingredients to be queried with the `-l` option.
+- Allow for in-source builds of ingredients which do not support out-of-source builds.
+- Disable `UPDATE_COMMAND` by default to avoid unnecessary build steps.
+- Improve command-line documentation.
+- Allow ingredients to be selectively included or excluded from a recipe for flexibility.
+- Allow ingredients to be specified which require their own `cmake-cooking` recipe with the `COOKING_RECIPE` parameter to `cooking_ingredient`.
+
 v0.3.0
 ------
 2018-06-05
