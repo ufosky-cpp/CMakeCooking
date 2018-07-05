@@ -135,7 +135,7 @@ EOF
 }
 
 yell_include_exclude_mutually_exclusive() {
-    echo "[-e] and [-i] are mutually exclusive options!"1>&2
+    echo "Cooking: [-e] and [-i] are mutually exclusive options!" >&2
 }
 
 while getopts "r:e:i:d:p:t:g:lhx" arg; do
