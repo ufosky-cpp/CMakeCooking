@@ -33,8 +33,8 @@ CMAKE=${CMAKE:-cmake}
 source_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 recipe=""
-excluded_ingredients=""
-included_ingredients=""
+declare -a excluded_ingredients
+declare -a included_ingredients
 build_dir="${source_dir}/build"
 build_type="Debug"
 # Depends on `build_dir`.
@@ -54,8 +54,8 @@ Usage: $0 [OPTIONS]
 where OPTIONS are:
 
 -r RECIPE
--e INGREDIENT[;INGREDIENT[;...]]
--i INGREDIENT[;INGREDIENT[;...]]
+-e INGREDIENT
+-i INGREDIENT
 -d BUILD_DIR (=${build_dir})
 -p INGREDIENTS_DIR (=${build_dir}/_cooking/installed)
 -t BUILD_TYPE (=${build_type})
@@ -75,13 +75,13 @@ Option details:
     Prepare the named recipe. Recipes are stored in 'recipe/RECIPE.cmake'.
     If no recipe is indicated, then configure the build without any ingredients.
 
--e INGREDIENT[;INGREDIENT[;...]]
+-e INGREDIENT
 
-    Exclude a list semicolon-separated list of ingredients from a recipe.
+    Exclude an ingredient from a recipe. This option can be supplied many times.
 
     For example, if a recipe consists of 'apple', 'banana', 'carrot', and 'donut', then
 
-        ./cooking.sh -r dev -e 'apple;donut'
+        ./cooking.sh -r dev -e apple -e donut
 
     will prepare 'banana' and 'carrot' but not prepare 'apple' and 'donut'.
 
@@ -89,15 +89,16 @@ Option details:
     can satisfy that dependency in some other way from the system (ie, the dependency is
     removed internally).
 
--i INGREDIENT[;INGREDIENT[;...]]
+-i INGREDIENT
 
-   Include a list of semicolon-separated ingredients from a recipe, ignoring the others.
+   Include an ingredient from a recipe, ignoring the others. This option can be supplied
+   many times.
 
    Similar to [-e], but the opposite.
 
    For example, if a recipe consists of 'apple', 'banana', 'carrot', and 'donut' then
 
-       ./cooking.sh -r dev -i 'apple;donut'
+       ./cooking.sh -r dev -i apple -i donut
 
    will prepare 'apple' and 'donut' but not prepare 'banana' and 'carrot'.
 
@@ -142,20 +143,20 @@ while getopts "r:e:i:d:p:t:g:lhx" arg; do
     case "${arg}" in
         r) recipe=${OPTARG} ;;
         e)
-            if [[ -n "${included_ingredients}" ]]; then
+            if [[ ${#included_ingredients[@]} -ne 0 ]]; then
                 yell_include_exclude_mutually_exclusive
                 exit 1
             fi
 
-            excluded_ingredients=${OPTARG}
+            excluded_ingredients+=(${OPTARG})
             ;;
         i)
-            if [[ -n "${excluded_ingredients}" ]]; then
+            if [[ ${#excluded_ingredients[@]} -ne 0 ]]; then
                 yell_include_exclude_mutually_exclusive
                 exit 1
             fi
 
-            included_ingredients=${OPTARG}
+            included_ingredients+=(${OPTARG})
             ;;
         d) build_dir=$(realpath "${OPTARG}") ;;
         p) ingredients_dir=$(realpath "${OPTARG}") ;;
@@ -475,15 +476,15 @@ fi
 
 if [ -n "${excluded_ingredients}" ] && [ -z "${list_only}" ]; then
     cmake_cooking_args+=(
-        "-DCooking_EXCLUDED_INGREDIENTS=${excluded_ingredients}"
-        "-DCooking_INCLUDED_INGREDIENTS="
+        -DCooking_EXCLUDED_INGREDIENTS=$(printf "%s;" "${excluded_ingredients[@]}")
+        -DCooking_INCLUDED_INGREDIENTS=
     )
 fi
 
 if [ -n "${included_ingredients}" ] && [ -z "${list_only}" ]; then
     cmake_cooking_args+=(
-        "-DCooking_EXCLUDED_INGREDIENTS="
-        "-DCooking_INCLUDED_INGREDIENTS=${included_ingredients}"
+        -DCooking_EXCLUDED_INGREDIENTS=
+        -DCooking_INCLUDED_INGREDIENTS=$(printf "%s;" "${included_ingredients[@]}")
     )
 fi
 
