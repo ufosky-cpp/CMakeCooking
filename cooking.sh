@@ -28,6 +28,8 @@
 
 set -e
 
+CMAKE=${CMAKE:-cmake}
+
 source_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 recipe=""
@@ -192,6 +194,10 @@ macro (project name)
   else ()
     set (_cooking_root OFF)
   endif ()
+
+  find_program (Cooking_STOW_EXECUTABLE
+    stow
+    "Executable path of GNU Stow.")
 
   set (Cooking_INGREDIENTS_DIR
     ${_cooking_dir}/installed
@@ -411,7 +417,7 @@ macro (cooking_ingredient name)
           flock
           --wait 30
           ${Cooking_INGREDIENTS_DIR}/.cooking_stow.lock
-          stow
+          ${Cooking_STOW_EXECUTABLE}
           -t ${Cooking_INGREDIENTS_DIR}
           -d ${_cooking_stow_dir}
           ${name}
@@ -496,8 +502,8 @@ if [ -n "${list_only}" ]; then
     cmake_cooking_args+=("-DCooking_LIST_ONLY=ON")
 fi
 
-cmake -DCMAKE_BUILD_TYPE="${build_type}" "${cmake_cooking_args[@]}" -G "${generator}" "${source_dir}"
-cmake --build . --target _cooking_ingredients_ready -- "${build_args[@]}"
+${CMAKE} -DCMAKE_BUILD_TYPE="${build_type}" "${cmake_cooking_args[@]}" -G "${generator}" "${source_dir}"
+${CMAKE} --build . --target _cooking_ingredients_ready -- "${build_args[@]}"
 
 #
 # Report what we've done (if we're not nested).
@@ -527,4 +533,4 @@ fi
 # Configure the project, expecting all requirements satisfied.
 #
 
-cmake -DCMAKE_FIND_PACKAGE_NO_PACKAGE_REGISTRY=ON "${@}" .
+${CMAKE} -DCMAKE_FIND_PACKAGE_NO_PACKAGE_REGISTRY=ON "${@}" .
