@@ -346,12 +346,6 @@ macro (cooking_ingredient name)
         set (_cooking_binary_dir "")
       endif ()
 
-      if (NOT (UPDATE_COMMAND IN_LIST _cooking_args))
-        set (_cooking_update_command UPDATE_COMMAND)
-      else ()
-        set (_cooking_update_command "")
-      endif ()
-
       set (_cooking_extra_cmake_args
         -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>)
 
@@ -407,7 +401,6 @@ macro (cooking_ingredient name)
       ExternalProject_add (ingredient_${name}
         ${_cooking_source_dir}
         ${_cooking_binary_dir}
-        ${_cooking_update_command} ""
         ${_cooking_configure_command}
         ${_cooking_build_command}
         ${_cooking_install_command}
