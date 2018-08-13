@@ -411,7 +411,7 @@ macro (cooking_ingredient name)
         CMAKE_ARGS ${_cooking_extra_cmake_args}
         "${_cooking_forwarded_args}")
 
-      if (_cooking_parsed_args_COOKING_RECIPE)
+      if ((SOURCE_DIR IN_LIST _cooking_args) OR _cooking_parsed_args_COOKING_RECIPE)
         ExternalProject_add_step (ingredient_${name}
           cooking-reconfigure
           DEPENDS ${Cooking_INGREDIENTS_DIR}/.cooking_stamp
