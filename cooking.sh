@@ -30,7 +30,9 @@ set -e
 
 CMAKE=${CMAKE:-cmake}
 
+invoked_args=("$@")
 source_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+memory_file="${source_dir}/.cooking_memory"
 
 recipe=""
 declare -a excluded_ingredients
@@ -53,6 +55,7 @@ Usage: $0 [OPTIONS]
 
 where OPTIONS are:
 
+-a
 -r RECIPE
 -e INGREDIENT
 -i INGREDIENT
@@ -70,6 +73,11 @@ will be fetched and built.
 [-i] and [-e] are mutually-exclusive options: only provide one.
 
 Option details:
+
+-a
+
+    Invoke 'cooking.sh' with the arguments that were provided to it last time, instead
+    of the arguments provided.
 
 -r RECIPE
 
@@ -149,8 +157,17 @@ yell_include_exclude_mutually_exclusive() {
     echo "Cooking: [-e] and [-i] are mutually exclusive options!" >&2
 }
 
-while getopts "r:e:i:d:p:t:g:s:lhx" arg; do
+while getopts "ar:e:i:d:p:t:g:s:lhx" arg; do
     case "${arg}" in
+        a)
+            if [ ! -f "${memory_file}" ]; then
+                echo "No previous invocation found to recall!" >&2
+                exit 1
+            fi
+
+            source "${memory_file}"
+            run_previous && exit 0
+            ;;
         r) recipe=${OPTARG} ;;
         e)
             if [[ ${#included_ingredients[@]} -ne 0 ]]; then
@@ -554,3 +571,15 @@ fi
 #
 
 ${CMAKE} -DCMAKE_FIND_PACKAGE_NO_PACKAGE_REGISTRY=ON "${@}" .
+
+#
+# Save invocation information.
+#
+
+cd "${source_dir}"
+
+cat <<EOF > "${memory_file}"
+run_previous() {
+    "${0}" ${invoked_args[@]@Q}
+}
+EOF
