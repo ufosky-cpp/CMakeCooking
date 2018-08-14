@@ -60,6 +60,7 @@ where OPTIONS are:
 -p INGREDIENTS_DIR (=${build_dir}/_cooking/installed)
 -t BUILD_TYPE (=${build_type})
 -g GENERATOR (=${generator})
+-s VAR=VALUE
 -l
 -h
 
@@ -124,6 +125,10 @@ Option details:
     Use the named CMake generator for building all ingredients and the project.
     An example generator is "Unix Makfiles".
 
+-s VAR=VALUE
+
+   Set an environmental variable 'VAR' to the value 'VALUE' during the invocation of CMake.
+
 -l
 
     Only list available ingredients for a given recipe, and don't do anything else.
@@ -135,11 +140,16 @@ Option details:
 EOF
 }
 
+parse_assignment() {
+    IFS='=' read -ra parts <<< "${1}"
+    export "${parts[0]}"="${parts[1]}"
+}
+
 yell_include_exclude_mutually_exclusive() {
     echo "Cooking: [-e] and [-i] are mutually exclusive options!" >&2
 }
 
-while getopts "r:e:i:d:p:t:g:lhx" arg; do
+while getopts "r:e:i:d:p:t:g:s:lhx" arg; do
     case "${arg}" in
         r) recipe=${OPTARG} ;;
         e)
@@ -162,6 +172,7 @@ while getopts "r:e:i:d:p:t:g:lhx" arg; do
         p) ingredients_dir=$(realpath "${OPTARG}") ;;
         t) build_type=${OPTARG} ;;
         g) generator=${OPTARG} ;;
+        s) parse_assignment "${OPTARG}" ;;
         l) list_only="1" ;;
         h) usage; exit 0 ;;
         x) nested="1" ;;
