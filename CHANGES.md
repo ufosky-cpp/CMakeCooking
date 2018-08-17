@@ -1,3 +1,36 @@
+v0.5.0
+------
+2018-08-17
+
+- Allow updates by default in ingredients.
+- Automatically reconfigure nested local ingredients.
+
+  If an ingredient is specified not with a URL or a `GIT_REPOSITORY` but instead is located on the local file-system (specified via `SOURCE_DIR`), then `cmake-cooking` will now correctly "pick-up" any changes when the ingredient changes.
+  
+- Allow environmental variables to be set via command-line options.
+
+  Instead of setting environmental variables like
+  
+      CXX=clang++ ./cooking.sh -r dev
+      
+  it's now possible to invoke `cmake-cooking` like this:
+  
+      ./cooking.sh -r dev -s CXX=clang++
+      
+  This has the advantage that the exact `cmake-cooking`-specific modifications to the environment are known to the script itself (and can be recorded for later).
+  
+- Allow recalling previous arguments for convenience.
+
+  `cmake-cooking` refreshes the state of the build every time it is invoked. Therefore, when there are many parameters, it can be inconvenient to remember them during every invocation.
+  
+  Now, one can write something like:
+  
+      ./cooking.sh -r dev -s CXX=clang++ -- -DMyProject_MAGIC=ONLY
+      
+  the first time, and the project can be subsequently reconfigured with the same parameters by invoking
+  
+      ./cooking.sh -a
+
 v0.4.0
 ------
 2018-07-05
