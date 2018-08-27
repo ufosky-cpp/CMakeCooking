@@ -1,3 +1,9 @@
+v0.6.0
+------
+2018-08-27
+
+- Re-license the project with the Apache License 2.0
+
 v0.5.0
 ------
 2018-08-17
