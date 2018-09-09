@@ -310,6 +310,13 @@ macro (project name)
   endif ()
 endmacro ()
 
+function (_cooking_query_by_key list key var)
+  list (FIND ${list} ${key} index)
+  math (EXPR value_index "${index} + 1")
+  list (GET ${list} ${value_index} value)
+  set (${var} ${value} PARENT_SCOPE)
+endfunction ()
+
 macro (cooking_ingredient name)
   set (_cooking_args "${ARGN}")
 
@@ -319,30 +326,64 @@ macro (cooking_ingredient name)
   else ()
     set (_cooking_ingredient_dir ${_cooking_dir}/ingredient/${name})
 
+    cmake_parse_arguments (
+      _cooking_parsed_args
+      ""
+      "COOKING_RECIPE"
+      "CMAKE_ARGS;COOKING_CMAKE_ARGS;COOKING_INCLUDE;COOKING_EXCLUDE;EXTERNAL_PROJECT_ARGS;REQUIRES"
+      ${_cooking_args})
+
+    if (NOT (SOURCE_DIR IN_LIST _cooking_args))
+      set (_cooking_source_dir ${_cooking_ingredient_dir}/src)
+      set (_cooking_ep_source_dir SOURCE_DIR ${_cooking_source_dir})
+    else ()
+      _cooking_query_by_key (_cooking_parsed_args_EXTERNAL_PROJECT_ARGS SOURCE_DIR _cooking_source_dir)
+      set (_cooking_ep_source_dir "")
+    endif ()
+
+    if (NOT ((BUILD_IN_SOURCE IN_LIST _cooking_args) OR (BINARY_DIR IN_LIST _cooking_args)))
+      set (_cooking_binary_dir ${_cooking_ingredient_dir}/build)
+      set (_cooking_ep_binary_dir BINARY_DIR ${_cooking_binary_dir})
+    else ()
+      _cooking_query_by_key (_cooking_parsed_args_EXTERNAL_PROJECT_ARGS BINARY_DIR _cooking_binary_dir)
+      set (_cooking_ep_binary_dir "")
+    endif ()
+
     if (Cooking_LIST_ONLY)
+      set (_cooking_listing_commands
+        COMMAND
+        ${CMAKE_COMMAND} -E touch ${Cooking_INGREDIENTS_DIR}/.cooking_ingredient_${name})
+
+      if (_cooking_parsed_args_COOKING_RECIPE)
+        list (INSERT _cooking_listing_commands 0
+          COMMAND
+          ${_cooking_source_dir}/cooking.sh
+          -r ${_cooking_parsed_args_COOKING_RECIPE}
+          -p ${Cooking_INGREDIENTS_DIR}
+          -x
+          -l)
+      endif ()
+
       add_custom_command (
         OUTPUT ${Cooking_INGREDIENTS_DIR}/.cooking_ingredient_${name}
         MAIN_DEPENDENCY ${Cooking_INGREDIENTS_DIR}/.cooking_stamp
-        COMMAND ${CMAKE_COMMAND} -E touch ${Cooking_INGREDIENTS_DIR}/.cooking_ingredient_${name})
+        ${_cooking_listing_commands})
 
       add_custom_target (_cooking_ingredient_${name}_listed
         DEPENDS ${Cooking_INGREDIENTS_DIR}/.cooking_ingredient_${name})
 
+      foreach (d ${_cooking_parsed_args_REQUIRES})
+        add_dependencies (_cooking_ingredient_${name}_listed _cooking_ingredient_${d}_listed)
+      endforeach ()
+
       add_dependencies (_cooking_ingredients _cooking_ingredient_${name}_listed)
     else ()
-      cmake_parse_arguments (
-        _cooking_parsed_args
-        ""
-        "COOKING_RECIPE"
-        "CMAKE_ARGS;COOKING_CMAKE_ARGS;COOKING_INCLUDE;COOKING_EXCLUDE;EXTERNAL_PROJECT_ARGS;REQUIRES"
-        ${_cooking_args})
-
       include (ExternalProject)
       set (_cooking_stow_dir ${_cooking_dir}/stow)
       string (REPLACE "<DISABLE>" "" _cooking_forwarded_args "${_cooking_parsed_args_EXTERNAL_PROJECT_ARGS}")
 
       if (_cooking_parsed_args_REQUIRES)
-        set (_cooking_depends DEPENDS)
+        set (_cooking_ep_depends DEPENDS)
 
         if (_cooking_excluding)
           # Strip out any dependencies that are excluded.
@@ -361,22 +402,10 @@ macro (cooking_ingredient name)
         endif ()
 
         foreach (d ${_cooking_parsed_args_REQUIRES})
-          list (APPEND _cooking_depends ingredient_${d})
+          list (APPEND _cooking_ep_depends ingredient_${d})
         endforeach ()
       else ()
-        set (_cooking_depends "")
-      endif ()
-
-      if (NOT (SOURCE_DIR IN_LIST _cooking_args))
-        set (_cooking_source_dir SOURCE_DIR ${_cooking_ingredient_dir}/src)
-      else ()
-        set (_cooking_source_dir "")
-      endif ()
-
-      if (NOT ((BUILD_IN_SOURCE IN_LIST _cooking_args) OR (BINARY_DIR IN_LIST _cooking_args)))
-        set (_cooking_binary_dir BINARY_DIR ${_cooking_ingredient_dir}/build)
-      else ()
-        set (_cooking_binary_dir "")
+        set (_cooking_ep_depends "")
       endif ()
 
       set (_cooking_extra_cmake_args
@@ -432,9 +461,9 @@ macro (cooking_ingredient name)
       endif ()
 
       ExternalProject_add (ingredient_${name}
-        ${_cooking_depends}
-        ${_cooking_source_dir}
-        ${_cooking_binary_dir}
+        ${_cooking_ep_depends}
+        ${_cooking_ep_source_dir}
+        ${_cooking_ep_binary_dir}
         ${_cooking_configure_command}
         ${_cooking_build_command}
         ${_cooking_install_command}
@@ -569,10 +598,10 @@ if [ -z "${nested}" ]; then
     done
 
     printf '\n'
+fi
 
-    if [ -n "${list_only}" ]; then
-        exit 0
-    fi
+if [ -n "${list_only}" ]; then
+    exit 0
 fi
 
 #
