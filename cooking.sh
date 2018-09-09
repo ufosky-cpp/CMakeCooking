@@ -310,41 +310,8 @@ macro (project name)
   endif ()
 endmacro ()
 
-set (_cooking_ingredient_name_pattern "([a-zA-Z][a-zA-Z0-9\-_]+)")
-
-function (_cooking_prefix_ingredients var input)
-  string (REGEX REPLACE
-    ${_cooking_ingredient_name_pattern}
-    ingredient_\\0
-    result
-    "${input}")
-
-  set (${var} ${result} PARENT_SCOPE)
-endfunction ()
-
-_cooking_prefix_ingredients (
-  _cooking_excluded_ingredients_prefixed
-  "${Cooking_EXCLUDED_INGREDIENTS}")
-
-_cooking_prefix_ingredients (
-  _cooking_included_ingredients_prefixed
-  "${Cooking_INCLUDED_INGREDIENTS}")
-
 macro (cooking_ingredient name)
   set (_cooking_args "${ARGN}")
-
-  if (_cooking_excluding)
-    # Strip out any dependencies that are excluded.
-    list (REMOVE_ITEM _cooking_args "${_cooking_excluded_ingredients_prefixed}")
-  elseif (_cooking_including)
-    # Eliminate dependencies that have not been included.
-    foreach (x IN LISTS _cooking_args)
-      if (("${x}" MATCHES ingredient_${_cooking_ingredient_name_pattern})
-          AND NOT ("${x}" IN_LIST Cooking_INCLUDED_INGREDIENTS))
-        list (REMOVE_ITEM _cooking_args ${x})
-      endif ()
-    endforeach ()
-  endif ()
 
   if ((_cooking_excluding AND (${name} IN_LIST Cooking_EXCLUDED_INGREDIENTS))
       OR (_cooking_including AND (NOT (${name} IN_LIST Cooking_INCLUDED_INGREDIENTS))))
@@ -367,12 +334,38 @@ macro (cooking_ingredient name)
         _cooking_parsed_args
         ""
         "COOKING_RECIPE"
-        "CMAKE_ARGS;COOKING_INCLUDE;COOKING_EXCLUDE"
+        "CMAKE_ARGS;COOKING_CMAKE_ARGS;COOKING_INCLUDE;COOKING_EXCLUDE;EXTERNAL_PROJECT_ARGS;REQUIRES"
         ${_cooking_args})
 
       include (ExternalProject)
       set (_cooking_stow_dir ${_cooking_dir}/stow)
-      string (REPLACE "<DISABLE>" "" _cooking_forwarded_args "${_cooking_parsed_args_UNPARSED_ARGUMENTS}")
+      string (REPLACE "<DISABLE>" "" _cooking_forwarded_args "${_cooking_parsed_args_EXTERNAL_PROJECT_ARGS}")
+
+      if (_cooking_parsed_args_REQUIRES)
+        set (_cooking_depends DEPENDS)
+
+        if (_cooking_excluding)
+          # Strip out any dependencies that are excluded.
+          foreach (x IN ITEMS ${Cooking_EXCLUDED_INGREDIENTS})
+            if (${x} IN_LIST _cooking_parsed_args_REQUIRES)
+              list (REMOVE_ITEM _cooking_parsed_args_REQUIRES ${x})
+            endif ()
+          endforeach ()
+        elseif (_cooking_including)
+          # Eliminate dependencies that have not been included.
+          foreach (x IN ITEMS ${_cooking_parsed_args_REQUIRES})
+            if (NOT (${x} IN_LIST Cooking_INCLUDED_INGREDIENTS))
+              list (REMOVE_ITEM _cooking_parsed_args_REQUIRES ${x})
+            endif ()
+          endforeach ()
+        endif ()
+
+        foreach (d ${_cooking_parsed_args_REQUIRES})
+          list (APPEND _cooking_depends ingredient_${d})
+        endforeach ()
+      else ()
+        set (_cooking_depends "")
+      endif ()
 
       if (NOT (SOURCE_DIR IN_LIST _cooking_args))
         set (_cooking_source_dir SOURCE_DIR ${_cooking_ingredient_dir}/src)
@@ -414,7 +407,7 @@ macro (cooking_ingredient name)
           ${_cooking_include_exclude_args}
           --
           ${_cooking_extra_cmake_args}
-          ${_cooking_parsed_args_CMAKE_ARGS})
+          ${_cooking_parsed_args_COOKING_CMAKE_ARGS})
       elseif (NOT (CONFIGURE_COMMAND IN_LIST _cooking_args))
         set (_cooking_configure_command
           CONFIGURE_COMMAND
@@ -439,6 +432,7 @@ macro (cooking_ingredient name)
       endif ()
 
       ExternalProject_add (ingredient_${name}
+        ${_cooking_depends}
         ${_cooking_source_dir}
         ${_cooking_binary_dir}
         ${_cooking_configure_command}
