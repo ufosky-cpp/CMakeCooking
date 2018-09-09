@@ -352,16 +352,16 @@ macro (cooking_ingredient name)
   else ()
     set (_cooking_ingredient_dir ${_cooking_dir}/ingredient/${name})
 
-    add_custom_target (_cooking_ingredient_${name}_post_install
-      DEPENDS ${Cooking_INGREDIENTS_DIR}/.cooking_ingredient_${name})
-
-    add_dependencies (_cooking_ingredients _cooking_ingredient_${name}_post_install)
-
     if (Cooking_LIST_ONLY)
       add_custom_command (
         OUTPUT ${Cooking_INGREDIENTS_DIR}/.cooking_ingredient_${name}
         MAIN_DEPENDENCY ${Cooking_INGREDIENTS_DIR}/.cooking_stamp
         COMMAND ${CMAKE_COMMAND} -E touch ${Cooking_INGREDIENTS_DIR}/.cooking_ingredient_${name})
+
+      add_custom_target (_cooking_ingredient_${name}_listed
+        DEPENDS ${Cooking_INGREDIENTS_DIR}/.cooking_ingredient_${name})
+
+      add_dependencies (_cooking_ingredients _cooking_ingredient_${name}_listed)
     else ()
       cmake_parse_arguments (
         _cooking_parsed_args
@@ -447,7 +447,6 @@ macro (cooking_ingredient name)
         PREFIX ${_cooking_ingredient_dir}
         STAMP_DIR ${_cooking_ingredient_dir}/stamp
         INSTALL_DIR ${_cooking_stow_dir}/${name}
-        STEP_TARGETS install
         CMAKE_ARGS ${_cooking_extra_cmake_args}
         "${_cooking_forwarded_args}")
 
@@ -458,10 +457,10 @@ macro (cooking_ingredient name)
           DEPENDERS configure)
       endif ()
 
-      add_custom_command (
-        OUTPUT ${Cooking_INGREDIENTS_DIR}/.cooking_ingredient_${name}
-        MAIN_DEPENDENCY ${Cooking_INGREDIENTS_DIR}/.cooking_stamp
-        DEPENDS ingredient_${name}-install
+      ExternalProject_add_step (ingredient_${name}
+        cooking-stow
+        DEPENDEES install
+        DEPENDS ${Cooking_INGREDIENTS_DIR}/.cooking_stamp
         COMMAND
           flock
           --wait 30
@@ -473,6 +472,11 @@ macro (cooking_ingredient name)
         COMMAND ${CMAKE_COMMAND} -E touch ${Cooking_INGREDIENTS_DIR}/.cooking_ingredient_${name})
 
       add_dependencies (_cooking_ingredients ingredient_${name})
+      ExternalProject_add_steptargets (ingredient_${name}
+        cooking-stow)
+
+      add_dependencies (_cooking_ingredients
+        ingredient_${name}-cooking-stow)
     endif ()
   endif ()
 endmacro ()
