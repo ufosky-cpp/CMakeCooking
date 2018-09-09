@@ -471,7 +471,6 @@ macro (cooking_ingredient name)
           ${name}
         COMMAND ${CMAKE_COMMAND} -E touch ${Cooking_INGREDIENTS_DIR}/.cooking_ingredient_${name})
 
-      add_dependencies (_cooking_ingredients ingredient_${name})
       ExternalProject_add_steptargets (ingredient_${name}
         cooking-stow)
 
