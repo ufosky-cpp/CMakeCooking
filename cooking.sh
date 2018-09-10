@@ -426,7 +426,7 @@ macro (cooking_ingredient name)
           list (APPEND _cooking_include_exclude_args -e ${e})
         endforeach ()
 
-        set (_cooking_configure_command
+        set (_cooking_ep_configure_command
           CONFIGURE_COMMAND
           <SOURCE_DIR>/cooking.sh
           -r ${_cooking_parsed_args_COOKING_RECIPE}
@@ -438,35 +438,35 @@ macro (cooking_ingredient name)
           ${_cooking_extra_cmake_args}
           ${_cooking_parsed_args_COOKING_CMAKE_ARGS})
       elseif (NOT (CONFIGURE_COMMAND IN_LIST _cooking_args))
-        set (_cooking_configure_command
+        set (_cooking_ep_configure_command
           CONFIGURE_COMMAND
           ${CMAKE_COMMAND}
           ${_cooking_extra_cmake_args}
           ${_cooking_parsed_args_CMAKE_ARGS}
           <SOURCE_DIR>)
       else ()
-        set (_cooking_configure_command "")
+        set (_cooking_ep_configure_command "")
       endif ()
 
       if (NOT (BUILD_COMMAND IN_LIST _cooking_args))
-        set (_cooking_build_command BUILD_COMMAND ${CMAKE_COMMAND} --build <BINARY_DIR>)
+        set (_cooking_ep_build_command BUILD_COMMAND ${CMAKE_COMMAND} --build <BINARY_DIR>)
       else ()
-        set (_cooking_build_command "")
+        set (_cooking_ep_build_command "")
       endif ()
 
       if (NOT (INSTALL_COMMAND IN_LIST _cooking_args))
-        set (_cooking_install_command INSTALL_COMMAND ${CMAKE_COMMAND} --build <BINARY_DIR> --target install)
+        set (_cooking_ep_install_command INSTALL_COMMAND ${CMAKE_COMMAND} --build <BINARY_DIR> --target install)
       else ()
-        set (_cooking_install_command "")
+        set (_cooking_ep_install_command "")
       endif ()
 
       ExternalProject_add (ingredient_${name}
         ${_cooking_ep_depends}
         ${_cooking_ep_source_dir}
         ${_cooking_ep_binary_dir}
-        ${_cooking_configure_command}
-        ${_cooking_build_command}
-        ${_cooking_install_command}
+        ${_cooking_ep_configure_command}
+        ${_cooking_ep_build_command}
+        ${_cooking_ep_install_command}
         PREFIX ${_cooking_ingredient_dir}
         STAMP_DIR ${_cooking_ingredient_dir}/stamp
         INSTALL_DIR ${_cooking_stow_dir}/${name}
