@@ -32,7 +32,7 @@ memory_file="${source_dir}/.cooking_memory"
 recipe=""
 declare -a excluded_ingredients
 declare -a included_ingredients
-build_dir="${source_dir}/build"
+build_dir="$(pwd)/build"
 build_type="Debug"
 # Depends on `build_dir`.
 ingredients_dir=""
