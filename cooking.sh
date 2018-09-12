@@ -536,7 +536,8 @@ if [ -n "${recipe}" ]; then
     recipe_file="${source_dir}/recipe/${recipe}.cmake"
 
     if [ ! -f "${recipe_file}" ]; then
-        echo "Cooking: The '${recipe}' recipe does not exist!" && exit 1
+        echo "Cooking: The '${recipe}' recipe does not exist!" >&2
+        exit 1
     fi
 fi
 
