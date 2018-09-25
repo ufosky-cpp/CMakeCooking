@@ -1,0 +1,12 @@
+(library
+  (name cooking_model)
+  (public_name cooking.model)
+  (libraries
+    logs
+    fmt
+    rresult)
+  (inline_tests)
+  (preprocess
+    (pps
+      ppx_deriving.std
+      ppx_inline_test)))

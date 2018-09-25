@@ -1,0 +1,11 @@
+(executable
+  (name cooking_test_model)
+  (public_name cooking-test-model)
+  (libraries
+    cooking.model
+    cooking.testing
+    cmdliner
+    fmt.cli
+    fmt.tty
+    logs.cli
+    logs.fmt))
