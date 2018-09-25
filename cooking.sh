@@ -583,7 +583,7 @@ if [ -n "${list_only}" ]; then
     cmake_cooking_args+=("-DCooking_LIST_ONLY=ON")
 fi
 
-${CMAKE} -DCMAKE_BUILD_TYPE="${build_type}" "${cmake_cooking_args[@]}" -G "${generator}" "${source_dir}"
+${CMAKE} -DCMAKE_BUILD_TYPE="${build_type}" "${cmake_cooking_args[@]}" -G "${generator}" "${source_dir}" "${@}"
 ${CMAKE} --build . --target _cooking_ingredients_ready -- "${build_args[@]}"
 
 #
