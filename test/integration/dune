@@ -1,0 +1,12 @@
+(executable
+  (name cooking_test_integration)
+  (public_name cooking-test-integration)
+  (libraries
+    bos
+    cmdliner
+    cooking.interaction
+    cooking.testing
+    fmt.cli
+    fmt.tty
+    logs.cli
+    logs.fmt))
