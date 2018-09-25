@@ -1,3 +1,22 @@
+# cmake-cooking stuff
+#
+#
+
+#**/.cooking_memory
+**/Cooking.cmake
+
+#
+# C++ stuff
+#
+
 cmake/Cooking.cmake
 **/CMakeLists.txt.*
 **/build*/
+
+#
+# OCaml stuff
+#
+
+**/_build/
+**/.merlin
+**/*.install
