@@ -409,8 +409,11 @@ macro (cooking_ingredient name)
         set (_cooking_ep_depends "")
       endif ()
 
+      string (REPLACE ";" ":" _cooking_cmake_prefix_path_with_colons "${CMAKE_PREFIX_PATH}")
+
       set (_cooking_extra_cmake_args
-        -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>)
+        -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
+        -DCMAKE_PREFIX_PATH=${_cooking_cmake_prefix_path_with_colons})
 
       if (NOT ("${ARGN}" MATCHES .*CMAKE_BUILD_TYPE.*))
         list (APPEND _cooking_extra_cmake_args -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE})
@@ -472,6 +475,7 @@ macro (cooking_ingredient name)
         STAMP_DIR ${_cooking_ingredient_dir}/stamp
         INSTALL_DIR ${_cooking_stow_dir}/${name}
         CMAKE_ARGS ${_cooking_extra_cmake_args}
+        LIST_SEPARATOR :
         "${_cooking_forwarded_args}")
 
       if ((SOURCE_DIR IN_LIST _cooking_args) OR _cooking_parsed_args_COOKING_RECIPE)
