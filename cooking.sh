@@ -27,12 +27,13 @@ CMAKE=${CMAKE:-cmake}
 
 invoked_args=("$@")
 source_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-memory_file="${source_dir}/.cooking_memory"
+initial_wd=$(pwd)
+memory_file="${initial_wd}/.cooking_memory"
 
 recipe=""
 declare -a excluded_ingredients
 declare -a included_ingredients
-build_dir="$(pwd)/build"
+build_dir="${initial_wd}/build"
 build_type="Debug"
 # Depends on `build_dir`.
 ingredients_dir=""
@@ -615,7 +616,7 @@ ${CMAKE} -DCMAKE_FIND_PACKAGE_NO_PACKAGE_REGISTRY=ON "${@}" .
 # Save invocation information.
 #
 
-cd "${source_dir}"
+cd "${initial_wd}"
 
 cat <<EOF > "${memory_file}"
 run_previous() {
