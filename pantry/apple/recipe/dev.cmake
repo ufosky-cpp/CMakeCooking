@@ -3,7 +3,6 @@ cooking_ingredient (Egg
     SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/extern/egg)
 
 cooking_ingredient (Banana
-  COOKING_EXCLUDE Egg
   COOKING_RECIPE dev
   REQUIRES Egg
   EXTERNAL_PROJECT_ARGS

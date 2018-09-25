@@ -5,7 +5,6 @@ cooking_ingredient (Durian
 
 cooking_ingredient (Carrot
   COOKING_RECIPE dev
-  COOKING_EXCLUDE Durian
   REQUIRES Durian
   EXTERNAL_PROJECT_ARGS
     SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/extern/carrot)
