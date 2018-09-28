@@ -318,6 +318,42 @@ function (_cooking_query_by_key list key var)
   set (${var} ${value} PARENT_SCOPE)
 endfunction ()
 
+function (_cooking_set_union x y var)
+  set (r ${${x}})
+
+  foreach (e ${${y}})
+    list (APPEND r ${e})
+  endforeach ()
+
+  list (REMOVE_DUPLICATES r)
+  set (${var} ${r} PARENT_SCOPE)
+endfunction ()
+
+function (_cooking_set_difference x y var)
+  set (r ${${x}})
+
+  foreach (e ${${y}})
+    if (${e} IN_LIST ${x})
+       list (REMOVE_ITEM r ${e})
+    endif ()
+  endforeach ()
+
+  set (${var} ${r} PARENT_SCOPE)
+endfunction ()
+
+function (_cooking_set_intersection x y var)
+  set (r "")
+
+  foreach (e ${${y}})
+    if (${e} IN_LIST ${x})
+      list (APPEND r ${e})
+    endif ()
+  endforeach ()
+
+  list (REMOVE_DUPLICATES r)
+  set (${var} ${r} PARENT_SCOPE)
+endfunction ()
+
 macro (cooking_ingredient name)
   set (_cooking_args "${ARGN}")
 
@@ -331,7 +367,7 @@ macro (cooking_ingredient name)
       _cooking_parsed_args
       ""
       "COOKING_RECIPE"
-      "CMAKE_ARGS;COOKING_CMAKE_ARGS;COOKING_INCLUDE;COOKING_EXCLUDE;EXTERNAL_PROJECT_ARGS;REQUIRES"
+      "CMAKE_ARGS;COOKING_CMAKE_ARGS;EXTERNAL_PROJECT_ARGS;REQUIRES"
       ${_cooking_args})
 
     if (NOT (SOURCE_DIR IN_LIST _cooking_args))
@@ -388,18 +424,16 @@ macro (cooking_ingredient name)
 
         if (_cooking_excluding)
           # Strip out any dependencies that are excluded.
-          foreach (x IN ITEMS ${Cooking_EXCLUDED_INGREDIENTS})
-            if (${x} IN_LIST _cooking_parsed_args_REQUIRES)
-              list (REMOVE_ITEM _cooking_parsed_args_REQUIRES ${x})
-            endif ()
-          endforeach ()
+          _cooking_set_difference (
+            _cooking_parsed_args_REQUIRES
+            Cooking_EXCLUDED_INGREDIENTS
+            _cooking_parsed_args_REQUIRES)
         elseif (_cooking_including)
           # Eliminate dependencies that have not been included.
-          foreach (x IN ITEMS ${_cooking_parsed_args_REQUIRES})
-            if (NOT (${x} IN_LIST Cooking_INCLUDED_INGREDIENTS))
-              list (REMOVE_ITEM _cooking_parsed_args_REQUIRES ${x})
-            endif ()
-          endforeach ()
+          _cooking_set_intersection (
+            _cooking_parsed_args_REQUIRES
+            Cooking_INCLUDED_INGREDIENTS
+            _cooking_parsed_args_REQUIRES)
         endif ()
 
         foreach (d ${_cooking_parsed_args_REQUIRES})
@@ -422,13 +456,29 @@ macro (cooking_ingredient name)
       if (_cooking_parsed_args_COOKING_RECIPE)
         set (_cooking_include_exclude_args "")
 
-        foreach (i ${_cooking_parsed_args_COOKING_INCLUDE})
-          list (APPEND _cooking_include_exclude_args -i ${i})
-        endforeach ()
+        if (_cooking_including)
+          _cooking_set_difference (
+            Cooking_INCLUDED_INGREDIENTS
+            _cooking_parsed_args_REQUIRES
+            _cooking_included)
 
-        foreach (e ${_cooking_parsed_args_COOKING_EXCLUDE})
-          list (APPEND _cooking_include_exclude_args -e ${e})
-        endforeach ()
+          foreach (x ${_cooking_included})
+            list (APPEND _cooking_include_exclude_args -i ${x})
+          endforeach ()
+        elseif (_cooking_excluding)
+          _cooking_set_union (
+            Cooking_EXCLUDED_INGREDIENTS
+            _cooking_parsed_args_REQUIRES
+            _cooking_excluded)
+
+          foreach (x ${_cooking_excluded})
+            list (APPEND _cooking_include_exclude_args -e ${x})
+          endforeach ()
+        else ()
+          foreach (x ${_cooking_parsed_args_REQUIRES})
+            list (APPEND _cooking_include_exclude_args -e ${x})
+          endforeach ()
+        endif ()
 
         set (_cooking_ep_configure_command
           CONFIGURE_COMMAND
