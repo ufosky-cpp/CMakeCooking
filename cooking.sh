@@ -370,7 +370,7 @@ macro (cooking_ingredient name)
       "CMAKE_ARGS;COOKING_CMAKE_ARGS;EXTERNAL_PROJECT_ARGS;REQUIRES"
       ${_cooking_args})
 
-    if (NOT (SOURCE_DIR IN_LIST _cooking_args))
+    if (NOT (SOURCE_DIR IN_LIST _cooking_parsed_args_EXTERNAL_PROJECT_ARGS))
       set (_cooking_source_dir ${_cooking_ingredient_dir}/src)
       set (_cooking_ep_source_dir SOURCE_DIR ${_cooking_source_dir})
     else ()
@@ -378,7 +378,8 @@ macro (cooking_ingredient name)
       set (_cooking_ep_source_dir "")
     endif ()
 
-    if (NOT ((BUILD_IN_SOURCE IN_LIST _cooking_args) OR (BINARY_DIR IN_LIST _cooking_args)))
+    if (NOT ((BUILD_IN_SOURCE IN_LIST _cooking_parsed_args_EXTERNAL_PROJECT_ARGS)
+             OR (BINARY_DIR IN_LIST _cooking_parsed_args_EXTERNAL_PROJECT_ARGS)))
       set (_cooking_binary_dir ${_cooking_ingredient_dir}/build)
       set (_cooking_ep_binary_dir BINARY_DIR ${_cooking_binary_dir})
     else ()
@@ -491,7 +492,7 @@ macro (cooking_ingredient name)
           --
           ${_cooking_extra_cmake_args}
           ${_cooking_parsed_args_COOKING_CMAKE_ARGS})
-      elseif (NOT (CONFIGURE_COMMAND IN_LIST _cooking_args))
+      elseif (NOT (CONFIGURE_COMMAND IN_LIST _cooking_parsed_args_EXTERNAL_PROJECT_ARGS))
         set (_cooking_ep_configure_command
           CONFIGURE_COMMAND
           ${CMAKE_COMMAND}
@@ -502,13 +503,13 @@ macro (cooking_ingredient name)
         set (_cooking_ep_configure_command "")
       endif ()
 
-      if (NOT (BUILD_COMMAND IN_LIST _cooking_args))
+      if (NOT (BUILD_COMMAND IN_LIST _cooking_parsed_args_EXTERNAL_PROJECT_ARGS))
         set (_cooking_ep_build_command BUILD_COMMAND ${CMAKE_COMMAND} --build <BINARY_DIR>)
       else ()
         set (_cooking_ep_build_command "")
       endif ()
 
-      if (NOT (INSTALL_COMMAND IN_LIST _cooking_args))
+      if (NOT (INSTALL_COMMAND IN_LIST _cooking_parsed_args_EXTERNAL_PROJECT_ARGS))
         set (_cooking_ep_install_command INSTALL_COMMAND ${CMAKE_COMMAND} --build <BINARY_DIR> --target install)
       else ()
         set (_cooking_ep_install_command "")
@@ -528,7 +529,7 @@ macro (cooking_ingredient name)
         LIST_SEPARATOR :
         "${_cooking_forwarded_args}")
 
-      if ((SOURCE_DIR IN_LIST _cooking_args) OR _cooking_parsed_args_COOKING_RECIPE)
+      if ((SOURCE_DIR IN_LIST _cooking_parsed_args_EXTERNAL_PROJECT_ARGS) OR _cooking_parsed_args_COOKING_RECIPE)
         ExternalProject_add_step (ingredient_${name}
           cooking-reconfigure
           DEPENDS ${Cooking_INGREDIENTS_DIR}/.cooking_stamp
