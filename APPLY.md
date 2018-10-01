@@ -27,20 +27,16 @@ However, the `carrot` project depends on both `egg` and `durian` directly.
 In the root directory of the source directory for `carrot`, we create a `recipe` directory and write in that directory a file `dev.cmake`. This is the specification of a recipe called `dev`:
 
     cooking_ingredient (Durian
-      CMAKE_ARGS -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
       EXTERNAL_PROJECT_ARGS
         SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/extern/durian)
 
     cooking_ingredient (Egg
-      CMAKE_ARGS -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
       EXTERNAL_PROJECT_ARGS
         SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/extern/egg)
                
 The recipe defines two recipes for two ingredients: `Durian` and `Egg`. By convention, we capitalize ingredient names unless they have a well-established lower-case name.
 
 By defining the recipes, we indicate that before we can configure out project, we must (optionally) fetch, configure, build, and install both of these ingredients.
-
-The `CMAKE_ARGS` instruct the `cooking.sh` how to invoke `cmake` when the ingredient is configured.
 
 `cmake-cooking` is wrapper over the `ExternalProject` CMake module. This module is very sophisticated and allows us to customize each stage of the process of fetching sources, configuring, building, and installing. `cmake-cooking` provides useful defaults which can be overwritten as necessary. The remaining arguments are forwarded to `ExternalProject_add`.
 
@@ -87,7 +83,6 @@ In this case, we specify a recipe that recursively invokes `cooking.sh` for the 
 For example, consider the `Banana` project:
 
     cooking_ingredient (Durian
-      CMAKE_ARGS -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
       EXTERNAL_PROJECT_ARGS
         SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/extern/durian)
 
