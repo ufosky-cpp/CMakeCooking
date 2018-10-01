@@ -1,3 +1,22 @@
+v0.7.0
+------
+2018-10-01
+
+- Use an `ExternalProject` step to ensure files are stowed rather than a custom target
+- Arguments to `cooking_ingredient` which are intended to be forwarded to `ExternalProject_add` are included in a dedicated list with parameter name `EXTERNAL_PROJECT_ARGS`
+- Fix a bug that prevented ingredient listings (the `-l` option) from functioning correctly
+- Add example projects ("ingredients") in the `pantry` directory for testing and learning
+- The build directory (including the default one of `build`) is created relative to the current working-directory of the shell at the time that `cooking.sh` is invoked rather than the directory in which `cooking.sh` is located
+- Error messages from `cooking.sh` go to `stderr` correctly
+- There is a description of the underlying model of `cmake-cooking` in `UNDERSTAND.md` and an implementation and verification (with unit tests) of this model written in OCaml
+- There is a library for invoking `cmake` and `cooking.sh` interactively (written in OCaml) and a new integration test suite
+- A `Makefile` exists for conveniently building documentation and running tests
+- The memory file written by `cooking.sh` (for recalling past invocations with the `-a` option) is always relative to the current working-directory of the shell rather than the location of `cooking.sh`
+- The value of `CMAKE_PREFIX_PATH` is forwarded to nested recipes
+- Extra arguments provided to `cooking.sh` after the `--` token are also forwarded to the initial call to `cmake` (for the ingredients)
+- The behavior `cooking.sh` with respect to "include" and "exclude" sets matches the model and its implementation in OCaml. The previous behavior was incorrect
+- Re-write documentation and add `APPLY.md` to document how to apply `cmake-cooking` to your project
+
 v0.6.0
 ------
 2018-08-27
