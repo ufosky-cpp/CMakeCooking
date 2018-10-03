@@ -311,13 +311,6 @@ macro (project name)
   endif ()
 endmacro ()
 
-function (_cooking_query_by_key list key var)
-  list (FIND ${list} ${key} index)
-  math (EXPR value_index "${index} + 1")
-  list (GET ${list} ${value_index} value)
-  set (${var} ${value} PARENT_SCOPE)
-endfunction ()
-
 function (_cooking_set_union x y var)
   set (r ${${x}})
 
@@ -354,6 +347,42 @@ function (_cooking_set_intersection x y var)
   set (${var} ${r} PARENT_SCOPE)
 endfunction ()
 
+function (_cooking_query_by_key list key var)
+  list (FIND ${list} ${key} index)
+
+  if (${index} EQUAL "-1")
+    set (value NOTFOUND)
+  else ()
+    math (EXPR value_index "${index} + 1")
+    list (GET ${list} ${value_index} value)
+  endif ()
+
+  set (${var} ${value} PARENT_SCOPE)
+endfunction ()
+
+function (_cooking_populate_ep_parameter)
+  cmake_parse_arguments (
+    pa
+    ""
+    "EXTERNAL_PROJECT_ARGS_LIST;PARAMETER;DEFAULT_VALUE"
+    ""
+    ${ARGN})
+
+  string (TOLOWER ${pa_PARAMETER} parameter_lower)
+  _cooking_query_by_key (${pa_EXTERNAL_PROJECT_ARGS_LIST} ${pa_PARAMETER} ${parameter_lower})
+  set (value ${${parameter_lower}})
+  set (var_name _cooking_${parameter_lower})
+  set (ep_var_name _cooking_ep_${parameter_lower})
+
+  if (NOT value)
+    set (${var_name} ${pa_DEFAULT_VALUE} PARENT_SCOPE)
+    set (${ep_var_name} ${pa_PARAMETER} ${pa_DEFAULT_VALUE} PARENT_SCOPE)
+  else ()
+    set (${var_name} ${value} PARENT_SCOPE)
+    set (${ep_var_name} "" PARENT_SCOPE)
+  endif ()
+endfunction ()
+
 macro (cooking_ingredient name)
   set (_cooking_args "${ARGN}")
 
@@ -370,21 +399,23 @@ macro (cooking_ingredient name)
       "CMAKE_ARGS;COOKING_CMAKE_ARGS;EXTERNAL_PROJECT_ARGS;REQUIRES"
       ${_cooking_args})
 
-    if (NOT (SOURCE_DIR IN_LIST _cooking_pa_EXTERNAL_PROJECT_ARGS))
-      set (_cooking_source_dir ${_cooking_ingredient_dir}/src)
-      set (_cooking_ep_source_dir SOURCE_DIR ${_cooking_source_dir})
-    else ()
-      _cooking_query_by_key (_cooking_pa_EXTERNAL_PROJECT_ARGS SOURCE_DIR _cooking_source_dir)
-      set (_cooking_ep_source_dir "")
-    endif ()
+    _cooking_populate_ep_parameter (
+      EXTERNAL_PROJECT_ARGS_LIST _cooking_pa_EXTERNAL_PROJECT_ARGS
+      PARAMETER SOURCE_DIR
+      DEFAULT_VALUE ${_cooking_ingredient_dir}/src)
 
-    if (NOT ((BUILD_IN_SOURCE IN_LIST _cooking_pa_EXTERNAL_PROJECT_ARGS)
-             OR (BINARY_DIR IN_LIST _cooking_pa_EXTERNAL_PROJECT_ARGS)))
-      set (_cooking_binary_dir ${_cooking_ingredient_dir}/build)
-      set (_cooking_ep_binary_dir BINARY_DIR ${_cooking_binary_dir})
-    else ()
-      _cooking_query_by_key (_cooking_pa_EXTERNAL_PROJECT_ARGS BINARY_DIR _cooking_binary_dir)
-      set (_cooking_ep_binary_dir "")
+    _cooking_populate_ep_parameter (
+      EXTERNAL_PROJECT_ARGS_LIST _cooking_pa_EXTERNAL_PROJECT_ARGS
+      PARAMETER BINARY_DIR
+      DEFAULT_VALUE ${_cooking_ingredient_dir}/build)
+
+    _cooking_populate_ep_parameter (
+      EXTERNAL_PROJECT_ARGS_LIST _cooking_pa_EXTERNAL_PROJECT_ARGS
+      PARAMETER BUILD_IN_SOURCE
+      DEFAULT_VALUE OFF)
+
+    if (_cooking_build_in_source)
+       set (_cooking_ep_binary_dir "")
     endif ()
 
     if (Cooking_LIST_ONLY)
