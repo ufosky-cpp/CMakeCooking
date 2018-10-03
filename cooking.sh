@@ -487,6 +487,7 @@ macro (cooking_ingredient name)
           -r ${_cooking_pa_COOKING_RECIPE}
           -d <BINARY_DIR>
           -p ${Cooking_INGREDIENTS_DIR}
+          -g ${CMAKE_GENERATOR}
           -x
           ${_cooking_include_exclude_args}
           --
