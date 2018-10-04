@@ -571,6 +571,61 @@ function (_cooking_populate_ep_install_command ep_args_list)
   set (_cooking_ep_install_command ${value} PARENT_SCOPE)
 endfunction ()
 
+function (_cooking_define_ep)
+  cmake_parse_arguments (
+    pa
+    ""
+    "NAME;SOURCE_DIR;BINARY_DIR;EXTERNAL_PROJECT_ARGS_LIST;RECIPE;INGREDIENT_DIR;STOW_DIR"
+    "DEPENDS;CONFIGURE_COMMAND;BUILD_COMMAND;INSTALL_COMMAND;CMAKE_ARGS"
+    ${ARGN})
+
+  string (REPLACE "<DISABLE>" "" forwarded_ep_args "${${pa_EXTERNAL_PROJECT_ARGS_LIST}}")
+  set (ep_name ingredient_${pa_NAME})
+  include (ExternalProject)
+
+  ExternalProject_add (${ep_name}
+    DEPENDS ${pa_DEPENDS}
+    SOURCE_DIR ${pa_SOURCE_DIR}
+    BINARY_DIR ${pa_BINARY_DIR}
+    CONFIGURE_COMMAND ${pa_CONFIGURE_COMMAND}
+    BUILD_COMMAND ${pa_BUILD_COMMAND}
+    INSTALL_COMMAND ${pa_INSTALL_COMMAND}
+    PREFIX ${pa_INGREDIENT_DIR}
+    STAMP_DIR ${pa_INGREDIENT_DIR}/stamp
+    INSTALL_DIR ${pa_STOW_DIR}/${pa_NAME}
+    CMAKE_ARGS ${pa_CMAKE_ARGS}
+    LIST_SEPARATOR :::
+    STEP_TARGETS install
+    "${forwarded_ep_args}")
+
+  set (stowed_marker_file ${Cooking_INGREDIENTS_DIR}/.cooking_ingredient_${pa_NAME})
+  set (lock_file ${Cooking_INGREDIENTS_DIR}/.cooking_stow.lock)
+
+  add_custom_command (
+    OUTPUT ${stowed_marker_file}
+    COMMAND
+      flock
+      --wait 30
+      ${lock_file}
+      ${Cooking_STOW_EXECUTABLE}
+      -t ${Cooking_INGREDIENTS_DIR}
+      -d ${pa_STOW_DIR}
+      ${pa_NAME}
+    COMMAND ${CMAKE_COMMAND} -E touch ${stowed_marker_file})
+
+  add_custom_target (_cooking_ingredient_${pa_NAME}_stowed
+    DEPENDS ${stowed_marker_file})
+
+  add_dependencies (_cooking_ingredient_${pa_NAME}_stowed
+    ingredient_${pa_NAME}-install)
+
+  foreach (d ${pa_DEPENDS})
+    add_dependencies (_cooking_ingredient_${pa_NAME}_stowed _cooking_${d}_stowed)
+  endforeach ()
+
+  add_dependencies (_cooking_ingredients _cooking_ingredient_${pa_NAME}_stowed)
+endfunction ()
+
 macro (cooking_ingredient name)
   set (_cooking_args "${ARGN}")
 
@@ -613,10 +668,6 @@ macro (cooking_ingredient name)
         RECIPE ${_cooking_pa_RECIPE}
         REQUIRES ${_cooking_pa_REQUIRES})
     else ()
-      include (ExternalProject)
-      set (_cooking_stow_dir ${_cooking_dir}/stow)
-      string (REPLACE "<DISABLE>" "" _cooking_forwarded_args "${_cooking_pa_EXTERNAL_PROJECT_ARGS}")
-
       _cooking_adjust_requirements (
         IS_EXCLUDING ${_cooking_excluding}
         IS_INCLUDING ${_cooking_including}
@@ -644,44 +695,19 @@ macro (cooking_ingredient name)
       _cooking_populate_ep_build_command (_cooking_pa_EXTERNAL_PROJECT_ARGS)
       _cooking_populate_ep_install_command (_cooking_pa_EXTERNAL_PROJECT_ARGS)
 
-      ExternalProject_add (ingredient_${name}
-        ${_cooking_ep_depends}
-        ${_cooking_ep_source_dir}
-        ${_cooking_ep_binary_dir}
-        ${_cooking_ep_configure_command}
-        ${_cooking_ep_build_command}
-        ${_cooking_ep_install_command}
-        PREFIX ${_cooking_ingredient_dir}
-        STAMP_DIR ${_cooking_ingredient_dir}/stamp
-        INSTALL_DIR ${_cooking_stow_dir}/${name}
+      _cooking_define_ep (
+        NAME ${name}
+        RECIPE ${_cooking_pa_COOKING_RECIPE}
+        DEPENDS ${_cooking_ep_depends}
+        SOURCE_DIR ${_cooking_ep_source_dir}
+        BINARY_DIR ${_cooking_ep_binary_dir}
+        CONFIGURE_COMMAND ${_cooking_ep_configure_command}
+        BUILD_COMMAND ${_cooking_ep_build_command}
+        INSTALL_COMMAND ${_cooking_ep_install_command}
+        INGREDIENT_DIR ${_cooking_ingredient_dir}
+        STOW_DIR ${_cooking_dir}/stow
         CMAKE_ARGS ${_cooking_common_cmake_args}
-        LIST_SEPARATOR :::
-        STEP_TARGETS install
-        "${_cooking_forwarded_args}")
-
-      add_custom_command (
-        OUTPUT ${Cooking_INGREDIENTS_DIR}/.cooking_ingredient_${name}
-        COMMAND
-          flock
-          --wait 30
-          ${Cooking_INGREDIENTS_DIR}/.cooking_stow.lock
-          ${Cooking_STOW_EXECUTABLE}
-          -t ${Cooking_INGREDIENTS_DIR}
-          -d ${_cooking_stow_dir}
-          ${name}
-        COMMAND ${CMAKE_COMMAND} -E touch ${Cooking_INGREDIENTS_DIR}/.cooking_ingredient_${name})
-
-      add_custom_target (_cooking_ingredient_${name}_stowed
-        DEPENDS ${Cooking_INGREDIENTS_DIR}/.cooking_ingredient_${name})
-
-      add_dependencies (_cooking_ingredient_${name}_stowed
-        ingredient_${name}-install)
-
-      foreach (d ${_cooking_pa_REQUIRES})
-        add_dependencies (_cooking_ingredient_${name}_stowed _cooking_ingredient_${d}_stowed)
-      endforeach ()
-
-      add_dependencies (_cooking_ingredients _cooking_ingredient_${name}_stowed)
+        EXTERNAL_PROJECT_ARGS_LIST _cooking_pa_EXTERNAL_PROJECT_ARGS)
     endif ()
   endif ()
 endmacro ()
