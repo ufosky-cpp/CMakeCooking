@@ -270,18 +270,18 @@ macro (project name)
   set (Cooking_RECIPE "" CACHE STRING "Configure ${name}'s dependencies according to the named recipe.")
 
   if ((NOT DEFINED Cooking_EXCLUDED_INGREDIENTS) OR (Cooking_EXCLUDED_INGREDIENTS STREQUAL ""))
-    set (_cooking_excluding OFF)
+    set (_cooking_is_excluding OFF)
   else ()
-    set (_cooking_excluding ON)
+    set (_cooking_is_excluding ON)
   endif ()
 
   if ((NOT DEFINED Cooking_INCLUDED_INGREDIENTS) OR (Cooking_INCLUDED_INGREDIENTS STREQUAL ""))
-    set (_cooking_including OFF)
+    set (_cooking_is_including OFF)
   else ()
-    set (_cooking_including ON)
+    set (_cooking_is_including ON)
   endif ()
 
-  if (_cooking_excluding AND _cooking_including)
+  if (_cooking_is_excluding AND _cooking_is_including)
     message (
       FATAL_ERROR
       "Cooking: The EXCLUDED_INGREDIENTS and INCLUDED_INGREDIENTS lists are mutually exclusive options!")
@@ -433,7 +433,7 @@ function (_cooking_adjust_requirements)
       pa_REQUIREMENTS
       Cooking_EXCLUDED_INGREDIENTS
       pa_REQUIREMENTS)
-  elseif (_cooking_including)
+  elseif (_cooking_is_including)
     # Eliminate dependencies that have not been included.
     _cooking_set_intersection (
       pa_REQUIREMENTS
@@ -629,8 +629,8 @@ endfunction ()
 macro (cooking_ingredient name)
   set (_cooking_args "${ARGN}")
 
-  if ((_cooking_excluding AND (${name} IN_LIST Cooking_EXCLUDED_INGREDIENTS))
-      OR (_cooking_including AND (NOT (${name} IN_LIST Cooking_INCLUDED_INGREDIENTS))))
+  if ((_cooking_is_excluding AND (${name} IN_LIST Cooking_EXCLUDED_INGREDIENTS))
+      OR (_cooking_is_including AND (NOT (${name} IN_LIST Cooking_INCLUDED_INGREDIENTS))))
     # Nothing.
   else ()
     set (_cooking_ingredient_dir ${_cooking_dir}/ingredient/${name})
@@ -669,8 +669,8 @@ macro (cooking_ingredient name)
         REQUIRES ${_cooking_pa_REQUIRES})
     else ()
       _cooking_adjust_requirements (
-        IS_EXCLUDING ${_cooking_excluding}
-        IS_INCLUDING ${_cooking_including}
+        IS_EXCLUDING ${_cooking_is_excluding}
+        IS_INCLUDING ${_cooking_is_including}
         REQUIREMENTS ${_cooking_pa_REQUIRES}
         OUTPUT_LIST _cooking_pa_REQUIRES)
 
@@ -680,8 +680,8 @@ macro (cooking_ingredient name)
       _cooking_determine_common_cmake_args (_cooking_common_cmake_args)
 
       _cooking_populate_ep_configure_command (
-        IS_EXCLUDING ${_cooking_excluding}
-        IS_INCLUDING ${_cooking_including}
+        IS_EXCLUDING ${_cooking_is_excluding}
+        IS_INCLUDING ${_cooking_is_including}
         RECIPE ${_cooking_pa_COOKING_RECIPE}
         REQUIREMENTS ${_cooking_pa_REQUIRES}
         EXTERNAL_PROJECT_ARGS_LIST _cooking_pa_EXTERNAL_PROJECT_ARGS
