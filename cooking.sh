@@ -512,6 +512,45 @@ function (_cooking_determine_common_cmake_args output)
     PARENT_SCOPE)
 endfunction ()
 
+function (_cooking_populate_ep_configure_command)
+  cmake_parse_arguments (
+    pa
+    ""
+    "IS_EXCLUDING;IS_INCLUDING;RECIPE;EXTERNAL_PROJECT_ARGS_LIST"
+    "REQUIREMENTS;CMAKE_ARGS;COOKING_CMAKE_ARGS"
+    ${ARGN})
+
+  if (pa_RECIPE)
+    _cooking_prepare_restrictions_arguments (
+      IS_EXCLUDING ${pa_IS_EXCLUDING}
+      IS_INCLUDING ${pa_IS_INCLUDING}
+      REQUIREMENTS ${pa_REQUIREMENTS}
+      OUTPUT_LIST restrictions_args)
+
+    set (value
+      CONFIGURE_COMMAND
+      <SOURCE_DIR>/cooking.sh
+      -r ${pa_RECIPE}
+      -d <BINARY_DIR>
+      -p ${Cooking_INGREDIENTS_DIR}
+      -g ${CMAKE_GENERATOR}
+      -x
+      ${restrictions_args}
+      --
+      ${pa_COOKING_CMAKE_ARGS})
+  elseif (NOT (CONFIGURE_COMMAND IN_LIST ${pa_EXTERNAL_PROJECT_ARGS_LIST}))
+    set (value
+      CONFIGURE_COMMAND
+      ${CMAKE_COMMAND}
+      ${pa_CMAKE_ARGS}
+      <SOURCE_DIR>)
+  else ()
+    set (value "")
+  endif ()
+
+  set (_cooking_ep_configure_command ${value} PARENT_SCOPE)
+endfunction ()
+
 function (_cooking_populate_ep_build_command ep_args_list)
   if (NOT (BUILD_COMMAND IN_LIST ${ep_args_list}))
     set (value BUILD_COMMAND ${CMAKE_COMMAND} --build <BINARY_DIR>)
@@ -589,35 +628,18 @@ macro (cooking_ingredient name)
 
       _cooking_determine_common_cmake_args (_cooking_common_cmake_args)
 
-      if (_cooking_pa_COOKING_RECIPE)
-        _cooking_prepare_restrictions_arguments (
-          IS_EXCLUDING ${_cooking_excluding}
-          IS_INCLUDING ${_cooking_including}
-          REQUIREMENTS ${_cooking_pa_REQUIRES}
-          OUTPUT_LIST _cooking_include_exclude_args)
-
-        set (_cooking_ep_configure_command
-          CONFIGURE_COMMAND
-          <SOURCE_DIR>/cooking.sh
-          -r ${_cooking_pa_COOKING_RECIPE}
-          -d <BINARY_DIR>
-          -p ${Cooking_INGREDIENTS_DIR}
-          -g ${CMAKE_GENERATOR}
-          -x
-          ${_cooking_include_exclude_args}
-          --
-          ${_cooking_common_cmake_args}
-          ${_cooking_pa_COOKING_CMAKE_ARGS})
-      elseif (NOT (CONFIGURE_COMMAND IN_LIST _cooking_pa_EXTERNAL_PROJECT_ARGS))
-        set (_cooking_ep_configure_command
-          CONFIGURE_COMMAND
-          ${CMAKE_COMMAND}
+      _cooking_populate_ep_configure_command (
+        IS_EXCLUDING ${_cooking_excluding}
+        IS_INCLUDING ${_cooking_including}
+        RECIPE ${_cooking_pa_COOKING_RECIPE}
+        REQUIREMENTS ${_cooking_pa_REQUIRES}
+        EXTERNAL_PROJECT_ARGS_LIST _cooking_pa_EXTERNAL_PROJECT_ARGS
+        CMAKE_ARGS
           ${_cooking_common_cmake_args}
           ${_cooking_pa_CMAKE_ARGS}
-          <SOURCE_DIR>)
-      else ()
-        set (_cooking_ep_configure_command "")
-      endif ()
+        COOKING_CMAKE_ARGS
+          ${_cooking_common_cmake_args}
+          ${_cooking_pa_COOKING_CMAKE_ARGS})
 
       _cooking_populate_ep_build_command (_cooking_pa_EXTERNAL_PROJECT_ARGS)
       _cooking_populate_ep_install_command (_cooking_pa_EXTERNAL_PROJECT_ARGS)
