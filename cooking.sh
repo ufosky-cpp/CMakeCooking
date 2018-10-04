@@ -465,6 +465,16 @@ function (_cooking_populate_ep_depends)
   set (_cooking_ep_depends ${value} PARENT_SCOPE)
 endfunction ()
 
+function (_cooking_determine_common_cmake_args output)
+  string (REPLACE ";" ":::" prefix_path_with_colons "${CMAKE_PREFIX_PATH}")
+
+  set (${output}
+    -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
+    -DCMAKE_PREFIX_PATH=${prefix_path_with_colons}
+    -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
+    PARENT_SCOPE)
+endfunction ()
+
 function (_cooking_populate_ep_build_command ep_args_list)
   if (NOT (BUILD_COMMAND IN_LIST ${ep_args_list}))
     set (value BUILD_COMMAND ${CMAKE_COMMAND} --build <BINARY_DIR>)
@@ -540,15 +550,7 @@ macro (cooking_ingredient name)
       _cooking_populate_ep_depends (
         REQUIREMENTS ${_cooking_pa_REQUIRES})
 
-      string (REPLACE ";" ":::" _cooking_cmake_prefix_path_with_colons "${CMAKE_PREFIX_PATH}")
-
-      set (_cooking_extra_cmake_args
-        -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
-        -DCMAKE_PREFIX_PATH=${_cooking_cmake_prefix_path_with_colons})
-
-      if (NOT ("${ARGN}" MATCHES .*CMAKE_BUILD_TYPE.*))
-        list (APPEND _cooking_extra_cmake_args -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE})
-      endif ()
+      _cooking_determine_common_cmake_args (_cooking_common_cmake_args)
 
       if (_cooking_pa_COOKING_RECIPE)
         set (_cooking_include_exclude_args "")
@@ -587,13 +589,13 @@ macro (cooking_ingredient name)
           -x
           ${_cooking_include_exclude_args}
           --
-          ${_cooking_extra_cmake_args}
+          ${_cooking_common_cmake_args}
           ${_cooking_pa_COOKING_CMAKE_ARGS})
       elseif (NOT (CONFIGURE_COMMAND IN_LIST _cooking_pa_EXTERNAL_PROJECT_ARGS))
         set (_cooking_ep_configure_command
           CONFIGURE_COMMAND
           ${CMAKE_COMMAND}
-          ${_cooking_extra_cmake_args}
+          ${_cooking_common_cmake_args}
           ${_cooking_pa_CMAKE_ARGS}
           <SOURCE_DIR>)
       else ()
@@ -613,7 +615,7 @@ macro (cooking_ingredient name)
         PREFIX ${_cooking_ingredient_dir}
         STAMP_DIR ${_cooking_ingredient_dir}/stamp
         INSTALL_DIR ${_cooking_stow_dir}/${name}
-        CMAKE_ARGS ${_cooking_extra_cmake_args}
+        CMAKE_ARGS ${_cooking_common_cmake_args}
         LIST_SEPARATOR :::
         STEP_TARGETS install
         "${_cooking_forwarded_args}")
