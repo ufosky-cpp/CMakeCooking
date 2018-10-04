@@ -465,6 +465,26 @@ function (_cooking_populate_ep_depends)
   set (_cooking_ep_depends ${value} PARENT_SCOPE)
 endfunction ()
 
+function (_cooking_populate_ep_build_command ep_args_list)
+  if (NOT (BUILD_COMMAND IN_LIST ${ep_args_list}))
+    set (value BUILD_COMMAND ${CMAKE_COMMAND} --build <BINARY_DIR>)
+  else ()
+    set (value "")
+  endif ()
+
+  set (_cooking_ep_build_command ${value} PARENT_SCOPE)
+endfunction ()
+
+function (_cooking_populate_ep_install_command ep_args_list)
+  if (NOT (INSTALL_COMMAND IN_LIST ${ep_args_list}))
+    set (value INSTALL_COMMAND ${CMAKE_COMMAND} --build <BINARY_DIR> --target install)
+  else ()
+    set (value "")
+  endif ()
+
+  set (_cooking_ep_install_command ${value} PARENT_SCOPE)
+endfunction ()
+
 macro (cooking_ingredient name)
   set (_cooking_args "${ARGN}")
 
@@ -580,17 +600,8 @@ macro (cooking_ingredient name)
         set (_cooking_ep_configure_command "")
       endif ()
 
-      if (NOT (BUILD_COMMAND IN_LIST _cooking_pa_EXTERNAL_PROJECT_ARGS))
-        set (_cooking_ep_build_command BUILD_COMMAND ${CMAKE_COMMAND} --build <BINARY_DIR>)
-      else ()
-        set (_cooking_ep_build_command "")
-      endif ()
-
-      if (NOT (INSTALL_COMMAND IN_LIST _cooking_pa_EXTERNAL_PROJECT_ARGS))
-        set (_cooking_ep_install_command INSTALL_COMMAND ${CMAKE_COMMAND} --build <BINARY_DIR> --target install)
-      else ()
-        set (_cooking_ep_install_command "")
-      endif ()
+      _cooking_populate_ep_build_command (_cooking_pa_EXTERNAL_PROJECT_ARGS)
+      _cooking_populate_ep_install_command (_cooking_pa_EXTERNAL_PROJECT_ARGS)
 
       ExternalProject_add (ingredient_${name}
         ${_cooking_ep_depends}
