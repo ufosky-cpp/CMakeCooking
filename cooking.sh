@@ -419,6 +419,52 @@ function (_cooking_define_listing_targets)
   add_dependencies (_cooking_ingredients _cooking_ingredient_${pa_NAME}_listed)
 endfunction ()
 
+function (_cooking_adjust_requirements)
+  cmake_parse_arguments (
+    pa
+    ""
+    "IS_EXCLUDING;IS_INCLUDING;OUTPUT_LIST"
+    "REQUIREMENTS"
+    ${ARGN})
+
+  if (pa_IS_EXCLUDING)
+    # Strip out any dependencies that are excluded.
+    _cooking_set_difference (
+      pa_REQUIREMENTS
+      Cooking_EXCLUDED_INGREDIENTS
+      pa_REQUIREMENTS)
+  elseif (_cooking_including)
+    # Eliminate dependencies that have not been included.
+    _cooking_set_intersection (
+      pa_REQUIREMENTS
+      Cooking_INCLUDED_INGREDIENTS
+      pa_REQUIREMENTS)
+  endif ()
+
+  set (${pa_OUTPUT_LIST} ${pa_REQUIREMENTS} PARENT_SCOPE)
+endfunction ()
+
+function (_cooking_populate_ep_depends)
+  cmake_parse_arguments (
+    pa
+    ""
+    ""
+    "REQUIREMENTS"
+    ${ARGN})
+
+  if (pa_REQUIREMENTS)
+    set (value DEPENDS)
+
+    foreach (d ${pa_REQUIREMENTS})
+      list (APPEND value ingredient_${d})
+    endforeach ()
+  else ()
+    set (value "")
+  endif ()
+
+  set (_cooking_ep_depends ${value} PARENT_SCOPE)
+endfunction ()
+
 macro (cooking_ingredient name)
   set (_cooking_args "${ARGN}")
 
@@ -465,29 +511,14 @@ macro (cooking_ingredient name)
       set (_cooking_stow_dir ${_cooking_dir}/stow)
       string (REPLACE "<DISABLE>" "" _cooking_forwarded_args "${_cooking_pa_EXTERNAL_PROJECT_ARGS}")
 
-      if (_cooking_pa_REQUIRES)
-        set (_cooking_ep_depends DEPENDS)
+      _cooking_adjust_requirements (
+        IS_EXCLUDING ${_cooking_excluding}
+        IS_INCLUDING ${_cooking_including}
+        REQUIREMENTS ${_cooking_pa_REQUIRES}
+        OUTPUT_LIST _cooking_pa_REQUIRES)
 
-        if (_cooking_excluding)
-          # Strip out any dependencies that are excluded.
-          _cooking_set_difference (
-            _cooking_pa_REQUIRES
-            Cooking_EXCLUDED_INGREDIENTS
-            _cooking_pa_REQUIRES)
-        elseif (_cooking_including)
-          # Eliminate dependencies that have not been included.
-          _cooking_set_intersection (
-            _cooking_pa_REQUIRES
-            Cooking_INCLUDED_INGREDIENTS
-            _cooking_pa_REQUIRES)
-        endif ()
-
-        foreach (d ${_cooking_pa_REQUIRES})
-          list (APPEND _cooking_ep_depends ingredient_${d})
-        endforeach ()
-      else ()
-        set (_cooking_ep_depends "")
-      endif ()
+      _cooking_populate_ep_depends (
+        REQUIREMENTS ${_cooking_pa_REQUIRES})
 
       string (REPLACE ";" ":::" _cooking_cmake_prefix_path_with_colons "${CMAKE_PREFIX_PATH}")
 
