@@ -383,6 +383,42 @@ function (_cooking_populate_ep_parameter)
   endif ()
 endfunction ()
 
+function (_cooking_define_listing_targets)
+  cmake_parse_arguments (
+    pa
+    ""
+    "NAME;SOURCE_DIR;RECIPE"
+    "REQUIRES"
+    ${ARGN})
+
+  set (commands
+    COMMAND
+    ${CMAKE_COMMAND} -E touch ${Cooking_INGREDIENTS_DIR}/.cooking_ingredient_${pa_NAME})
+
+  if (pa_RECIPE)
+    list (INSERT commands 0
+      COMMAND
+      ${pa_SOURCE_DIR}/cooking.sh
+      -r ${pa_RECIPE}
+      -p ${Cooking_INGREDIENTS_DIR}
+      -x
+      -l)
+  endif ()
+
+  add_custom_command (
+    OUTPUT ${Cooking_INGREDIENTS_DIR}/.cooking_ingredient_${pa_NAME}
+    ${commands})
+
+  add_custom_target (_cooking_ingredient_${pa_NAME}_listed
+    DEPENDS ${Cooking_INGREDIENTS_DIR}/.cooking_ingredient_${pa_NAME})
+
+  foreach (d ${pa_REQUIRES})
+    add_dependencies (_cooking_ingredient_${pa_NAME}_listed _cooking_ingredient_${d}_listed)
+  endforeach ()
+
+  add_dependencies (_cooking_ingredients _cooking_ingredient_${pa_NAME}_listed)
+endfunction ()
+
 macro (cooking_ingredient name)
   set (_cooking_args "${ARGN}")
 
@@ -419,32 +455,11 @@ macro (cooking_ingredient name)
     endif ()
 
     if (Cooking_LIST_ONLY)
-      set (_cooking_listing_commands
-        COMMAND
-        ${CMAKE_COMMAND} -E touch ${Cooking_INGREDIENTS_DIR}/.cooking_ingredient_${name})
-
-      if (_cooking_pa_COOKING_RECIPE)
-        list (INSERT _cooking_listing_commands 0
-          COMMAND
-          ${_cooking_source_dir}/cooking.sh
-          -r ${_cooking_pa_COOKING_RECIPE}
-          -p ${Cooking_INGREDIENTS_DIR}
-          -x
-          -l)
-      endif ()
-
-      add_custom_command (
-        OUTPUT ${Cooking_INGREDIENTS_DIR}/.cooking_ingredient_${name}
-        ${_cooking_listing_commands})
-
-      add_custom_target (_cooking_ingredient_${name}_listed
-        DEPENDS ${Cooking_INGREDIENTS_DIR}/.cooking_ingredient_${name})
-
-      foreach (d ${_cooking_pa_REQUIRES})
-        add_dependencies (_cooking_ingredient_${name}_listed _cooking_ingredient_${d}_listed)
-      endforeach ()
-
-      add_dependencies (_cooking_ingredients _cooking_ingredient_${name}_listed)
+      _cooking_define_listing_targets (
+        NAME ${name}
+        SOURCE_DIR ${_cooking_source_dir}
+        RECIPE ${_cooking_pa_RECIPE}
+        REQUIRES ${_cooking_pa_REQUIRES})
     else ()
       include (ExternalProject)
       set (_cooking_stow_dir ${_cooking_dir}/stow)
