@@ -465,6 +465,43 @@ function (_cooking_populate_ep_depends)
   set (_cooking_ep_depends ${value} PARENT_SCOPE)
 endfunction ()
 
+function (_cooking_prepare_restrictions_arguments)
+  cmake_parse_arguments (
+    pa
+    ""
+    "IS_EXCLUDING;IS_INCLUDING;OUTPUT_LIST"
+    "REQUIREMENTS"
+    ${ARGN})
+
+  set (args "")
+
+  if (pa_IS_INCLUDING)
+    _cooking_set_difference (
+      Cooking_INCLUDED_INGREDIENTS
+      pa_REQUIREMENTS
+      included)
+
+    foreach (x ${included})
+      list (APPEND args -i ${x})
+    endforeach ()
+  elseif (pa_IS_EXCLUDING)
+    _cooking_set_union (
+      Cooking_EXCLUDED_INGREDIENTS
+      pa_REQUIREMENTS
+      excluded)
+
+    foreach (x ${excluded})
+      list (APPEND args -e ${x})
+    endforeach ()
+  else ()
+    foreach (x ${pa_REQUIREMENTS})
+      list (APPEND args -e ${x})
+    endforeach ()
+  endif ()
+
+  set (${pa_OUTPUT_LIST} ${args} PARENT_SCOPE)
+endfunction ()
+
 function (_cooking_determine_common_cmake_args output)
   string (REPLACE ";" ":::" prefix_path_with_colons "${CMAKE_PREFIX_PATH}")
 
@@ -553,31 +590,11 @@ macro (cooking_ingredient name)
       _cooking_determine_common_cmake_args (_cooking_common_cmake_args)
 
       if (_cooking_pa_COOKING_RECIPE)
-        set (_cooking_include_exclude_args "")
-
-        if (_cooking_including)
-          _cooking_set_difference (
-            Cooking_INCLUDED_INGREDIENTS
-            _cooking_pa_REQUIRES
-            _cooking_included)
-
-          foreach (x ${_cooking_included})
-            list (APPEND _cooking_include_exclude_args -i ${x})
-          endforeach ()
-        elseif (_cooking_excluding)
-          _cooking_set_union (
-            Cooking_EXCLUDED_INGREDIENTS
-            _cooking_pa_REQUIRES
-            _cooking_excluded)
-
-          foreach (x ${_cooking_excluded})
-            list (APPEND _cooking_include_exclude_args -e ${x})
-          endforeach ()
-        else ()
-          foreach (x ${_cooking_pa_REQUIRES})
-            list (APPEND _cooking_include_exclude_args -e ${x})
-          endforeach ()
-        endif ()
+        _cooking_prepare_restrictions_arguments (
+          IS_EXCLUDING ${_cooking_excluding}
+          IS_INCLUDING ${_cooking_including}
+          REQUIREMENTS ${_cooking_pa_REQUIRES}
+          OUTPUT_LIST _cooking_include_exclude_args)
 
         set (_cooking_ep_configure_command
           CONFIGURE_COMMAND
