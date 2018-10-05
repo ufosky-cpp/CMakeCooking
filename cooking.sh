@@ -562,13 +562,6 @@ macro (cooking_ingredient name)
         STEP_TARGETS install
         "${_cooking_forwarded_args}")
 
-      if ((SOURCE_DIR IN_LIST _cooking_pa_EXTERNAL_PROJECT_ARGS) OR _cooking_pa_COOKING_RECIPE)
-        ExternalProject_add_step (ingredient_${name}
-          cooking-reconfigure
-          DEPENDS ${Cooking_INGREDIENTS_DIR}/.cooking_stamp
-          DEPENDERS configure)
-      endif ()
-
       add_custom_command (
         OUTPUT ${Cooking_INGREDIENTS_DIR}/.cooking_ingredient_${name}
         COMMAND
