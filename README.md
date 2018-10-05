@@ -70,6 +70,8 @@ list (APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 include (Cooking OPTIONAL)
 ```
 
+For work-flows, more details, and instructions for automatically synchronizing ingredients on the local file-system, see [APPLY.md](./APPLY.md).
+
 # References
 
 - ["Effective CMake" from C++Now 2017](https://www.youtube.com/watch?v=bsXLMQ6WgIk)
