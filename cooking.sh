@@ -559,6 +559,7 @@ macro (cooking_ingredient name)
         INSTALL_DIR ${_cooking_stow_dir}/${name}
         CMAKE_ARGS ${_cooking_extra_cmake_args}
         LIST_SEPARATOR :::
+        STEP_TARGETS install
         "${_cooking_forwarded_args}")
 
       if ((SOURCE_DIR IN_LIST _cooking_pa_EXTERNAL_PROJECT_ARGS) OR _cooking_pa_COOKING_RECIPE)
@@ -568,10 +569,8 @@ macro (cooking_ingredient name)
           DEPENDERS configure)
       endif ()
 
-      ExternalProject_add_step (ingredient_${name}
-        cooking-stow
-        DEPENDEES install
-        DEPENDS ${Cooking_INGREDIENTS_DIR}/.cooking_stamp
+      add_custom_command (
+        OUTPUT ${Cooking_INGREDIENTS_DIR}/.cooking_ingredient_${name}
         COMMAND
           flock
           --wait 30
@@ -582,11 +581,17 @@ macro (cooking_ingredient name)
           ${name}
         COMMAND ${CMAKE_COMMAND} -E touch ${Cooking_INGREDIENTS_DIR}/.cooking_ingredient_${name})
 
-      ExternalProject_add_steptargets (ingredient_${name}
-        cooking-stow)
+      add_custom_target (_cooking_ingredient_${name}_stowed
+        DEPENDS ${Cooking_INGREDIENTS_DIR}/.cooking_ingredient_${name})
 
-      add_dependencies (_cooking_ingredients
-        ingredient_${name}-cooking-stow)
+      add_dependencies (_cooking_ingredient_${name}_stowed
+        ingredient_${name}-install)
+
+      foreach (d ${_cooking_pa_REQUIRES})
+        add_dependencies (_cooking_ingredient_${name}_stowed _cooking_ingredient_${d}_stowed)
+      endforeach ()
+
+      add_dependencies (_cooking_ingredients _cooking_ingredient_${name}_stowed)
     endif ()
   endif ()
 endmacro ()
