@@ -435,7 +435,6 @@ macro (cooking_ingredient name)
 
       add_custom_command (
         OUTPUT ${Cooking_INGREDIENTS_DIR}/.cooking_ingredient_${name}
-        MAIN_DEPENDENCY ${Cooking_INGREDIENTS_DIR}/.cooking_stamp
         ${_cooking_listing_commands})
 
       add_custom_target (_cooking_ingredient_${name}_listed
@@ -612,7 +611,6 @@ if [ -d "${ingredients_dir}" -a -z "${nested}" ]; then
 fi
 
 mkdir -p "${ingredients_dir}"
-touch "${ingredients_dir}/.cooking_stamp"
 
 #
 # Validate recipe.
