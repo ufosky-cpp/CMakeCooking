@@ -1,3 +1,14 @@
+v0.8.0
+------
+2018-10-05
+
+- Forward the CMake generator to nested calls to `cooking.sh`. This means that if the top-level project is configured with the `Unix Makefiles` generator, then all ingredients which also use `cmake-cooking` will also use `Unix Makefiles`
+- Prevent the CMake list-separator of `:` from interfering with environmental variables like `PATH` by switching to use `:::` as the separator
+- Switch back to custom targets for stowing files (with improvements)
+- Remove the `.cooking_stamp` mechanism, which is no longer necessary
+- Refactor CMake code into encapsulated functions wherever possible
+- Augment and fix support for synchronizing changes from ingredients on the local file-system. The combination of the new `LOCAL_RECONFIGURE` and `LOCAL_REBUILD` options to `cooking_ingredient` and the `cooking_mark_targets` function allow a developer to work on multiple projects at once and have changes automatically reflected in the "root" project by the build too. See `APPLY.md` for more details
+
 v0.7.0
 ------
 2018-10-01
