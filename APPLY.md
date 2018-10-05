@@ -44,7 +44,7 @@ In these examples, we have used symbolic links in the `pantry` directory to mimi
 
 For example, inside the source tree of `carrot` there are directories `extern/egg` and `extern/durian`.
 
-Therefore, we have specified that the sources are available at this location with `SOURCE_DIR`. In practice, it is particularly useful (and very recommended) to deal with released artifacts at specific version numbers. You can do this by specifying the web address of an archive with the `URL` parameter. Please see the documentation of the `ExternalProject` functions for more information. One advantage of using a path on the local file-system is that you can develop many projects simultaneously and easily integrate changes to the source code of a dependency without having to make a release or install anything.
+Therefore, we have specified that the sources are available at this location with `SOURCE_DIR`. In practice, it is particularly useful (and very recommended) to deal with released artifacts at specific version numbers. You can do this by specifying the web address of an archive with the `URL` parameter. Please see the documentation of the `ExternalProject` functions for more information. One advantage of using a path on the local file-system is that you can develop many projects simultaneously and easily integrate changes to the source code of a dependency without having to make a release or install anything (see below for more).
 
 To use `cooking.sh` to execute this recipe, we just issue (in the root source directory of `carrot`):
 
@@ -74,6 +74,39 @@ For example, if we wish to use `Egg` installed in some other fashion we can excl
 
     ./cooking.sh -r dev -e Egg
     
+### Developing many ingredients locally
+
+If an ingredient specifies `SOURCE_DIR` with a path to a directory on the local file-system, then the source code will be copied over once to a project-specific location by `cooking.sh`. This means that if the source code of the ingredient changes, these changes will *not* be incorporated into the project during re-compilation.
+
+To support work-flows in which many projects are worked-on simultaneously, the `LOCAL_REBUILD` and `LOCAL_RECONFIGURE` options are available.
+
+Suppose there is a project in `~/src/support_library` and a project `~/src/my_app`.
+
+In `~/src/my_app/recipe/dev.cmake` we have
+
+    cooking_ingredient (SupportLibrary
+      LOCAL_RECONFIGURE
+      EXTERNAL_PROJECT_ARGS
+        SOURCE_DIR ${HOME}/src/support_library)
+
+Since we have specified `LOCAL_RECONFIGURE`, every time we re-compile `my_app` it will cause `SupportLibrary` to be re-configured, re-built, and re-installed locally. That is, any changes in `~/src/support_library` will be reflected automatically.
+
+The same would have been true if we had replaced `LOCAL_RECONFIGURE` with `LOCAL_REBUILD`, except that `SupportLibrary` would always be re-built instead of always being re-configured.
+
+There is one more necessary step. While `SupportLibrary` will always be re-configured or re-built, we must indicate that our project targets depend directly on these updated ingredients. Otherwise, the order of operations is not defined and our project artifacts may be built before the ingredients are updated. Normally, this is handled automatically by `cooking.sh` but we need extra support to "intercept" the build tool in the local case.
+
+Therefore, we can add the following to `~/src/my_app/CMakeLists.txt`:
+
+    if (Cooking_ENABLED)
+      cooking_mark_targets (my_app)
+    endif ()
+    
+where `my_app` is a target defined by the `MyApp` project.
+
+Doing this ensures that any local changes to an ingredient will always complete before we attempt to build `my_app`.
+
+`cooking_mark_targets` supports an arbitrary number of arguments.
+
 ### Example: A dependency with its own dependencies
 
 We may have a dependency with its own external dependencies.

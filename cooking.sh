@@ -245,6 +245,10 @@ macro (project name)
     message (FATAL_ERROR "Cooking: GNU Stow is required!")
   endif ()
 
+  option (Cooking_ENABLED
+    "Indicates that the `Cooking` module is available and in use."
+    ON)
+
   set (Cooking_INGREDIENTS_DIR
     ${_cooking_dir}/installed
     CACHE
@@ -575,7 +579,7 @@ function (_cooking_define_ep)
   cmake_parse_arguments (
     pa
     ""
-    "NAME;SOURCE_DIR;BINARY_DIR;EXTERNAL_PROJECT_ARGS_LIST;RECIPE;INGREDIENT_DIR;STOW_DIR"
+    "NAME;SOURCE_DIR;BINARY_DIR;EXTERNAL_PROJECT_ARGS_LIST;RECIPE;INGREDIENT_DIR;STOW_DIR;LOCAL_RECONFIGURE;LOCAL_REBUILD"
     "DEPENDS;CONFIGURE_COMMAND;BUILD_COMMAND;INSTALL_COMMAND;CMAKE_ARGS"
     ${ARGN})
 
@@ -623,8 +627,28 @@ function (_cooking_define_ep)
     add_dependencies (_cooking_ingredient_${pa_NAME}_stowed _cooking_${d}_stowed)
   endforeach ()
 
+  if (pa_LOCAL_RECONFIGURE OR pa_LOCAL_REBUILD)
+    if (pa_LOCAL_RECONFIGURE)
+      set (step configure)
+    else ()
+      set (step build)
+    endif ()
+
+    ExternalProject_add_step (${ep_name}
+      cooking-synchronize-local
+      DEPENDERS ${step}
+      COMMAND ${CMAKE_COMMAND} -E echo_append
+      ALWAYS ON)
+  endif ()
+
   add_dependencies (_cooking_ingredients _cooking_ingredient_${pa_NAME}_stowed)
 endfunction ()
+
+macro (cooking_mark_targets)
+  foreach (t ${ARGN})
+    add_dependencies (${t} _cooking_ingredients)
+  endforeach ()
+endmacro ()
 
 macro (cooking_ingredient name)
   set (_cooking_args "${ARGN}")
@@ -637,7 +661,7 @@ macro (cooking_ingredient name)
 
     cmake_parse_arguments (
       _cooking_pa
-      ""
+      "LOCAL_RECONFIGURE;LOCAL_REBUILD"
       "COOKING_RECIPE"
       "CMAKE_ARGS;COOKING_CMAKE_ARGS;EXTERNAL_PROJECT_ARGS;REQUIRES"
       ${_cooking_args})
@@ -707,7 +731,9 @@ macro (cooking_ingredient name)
         INGREDIENT_DIR ${_cooking_ingredient_dir}
         STOW_DIR ${_cooking_dir}/stow
         CMAKE_ARGS ${_cooking_common_cmake_args}
-        EXTERNAL_PROJECT_ARGS_LIST _cooking_pa_EXTERNAL_PROJECT_ARGS)
+        EXTERNAL_PROJECT_ARGS_LIST _cooking_pa_EXTERNAL_PROJECT_ARGS
+        LOCAL_RECONFIGURE ${_cooking_pa_LOCAL_RECONFIGURE}
+        LOCAL_REBUILD ${_cooking_pa_LOCAL_REBUILD})
     endif ()
   endif ()
 endmacro ()
