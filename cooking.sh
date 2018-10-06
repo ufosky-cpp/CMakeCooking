@@ -690,7 +690,7 @@ macro (cooking_ingredient name)
       _cooking_define_listing_targets (
         NAME ${name}
         SOURCE_DIR ${_cooking_source_dir}
-        RECIPE ${_cooking_pa_RECIPE}
+        RECIPE ${_cooking_pa_COOKING_RECIPE}
         REQUIRES ${_cooking_pa_REQUIRES})
     else ()
       _cooking_adjust_requirements (
