@@ -405,6 +405,7 @@ function (_cooking_define_listing_targets)
       ${pa_SOURCE_DIR}/cooking.sh
       -r ${pa_RECIPE}
       -p ${Cooking_INGREDIENTS_DIR}
+      -g ${CMAKE_GENERATOR}
       -x
       -l)
   endif ()
