@@ -620,11 +620,11 @@ function (_cooking_define_ep)
     STEP_TARGETS install
     "${forwarded_ep_args}")
 
-  set (stowed_marker_file ${Cooking_INGREDIENTS_DIR}/.cooking_ingredient_${pa_NAME})
+  set (stow_marker_file ${Cooking_INGREDIENTS_DIR}/.cooking_ingredient_${pa_NAME})
   set (lock_file ${Cooking_INGREDIENTS_DIR}/.cooking_stow.lock)
 
   add_custom_command (
-    OUTPUT ${stowed_marker_file}
+    OUTPUT ${stow_marker_file}
     COMMAND
       flock
       --wait 30
@@ -633,22 +633,22 @@ function (_cooking_define_ep)
       -t ${Cooking_INGREDIENTS_DIR}
       -d ${pa_STOW_DIR}
       ${pa_NAME}
-    COMMAND ${CMAKE_COMMAND} -E touch ${stowed_marker_file})
+    COMMAND ${CMAKE_COMMAND} -E touch ${stow_marker_file})
 
   add_custom_target (_cooking_ingredient_${pa_NAME}_stowed
-    DEPENDS ${stowed_marker_file})
+    DEPENDS ${stow_marker_file})
 
   if (pa_RECIPE)
-    set (reconfigured_marker_file ${Cooking_INGREDIENTS_DIR}/.cooking_reconfigured_ingredient_${pa_NAME})
+    set (reconfigure_marker_file ${Cooking_INGREDIENTS_DIR}/.cooking_reconfigure_ingredient_${pa_NAME})
 
     add_custom_command (
-      OUTPUT ${reconfigured_marker_file}
-      COMMAND ${CMAKE_COMMAND} -E touch ${reconfigured_marker_file})
+      OUTPUT ${reconfigure_marker_file}
+      COMMAND ${CMAKE_COMMAND} -E touch ${reconfigure_marker_file})
 
     ExternalProject_add_step (${ep_name}
       cooking-reconfigure
       DEPENDERS configure
-      DEPENDS ${reconfigured_marker_file}
+      DEPENDS ${reconfigure_marker_file}
       COMMAND ${CMAKE_COMMAND} -E echo_append)
   endif ()
 
