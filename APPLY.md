@@ -102,6 +102,22 @@ To fix this, we use the `REQUIRES` argument in the recipe for `Carrot`. This doe
 
 In this way, we can build arbitrary acyclic graphs of dependencies with recipes with maximal flexibility in terms of how we provide each ingredient.
 
+### Using `cmake-cooking` with integrated development environments (IDEs)
+
+It is very easy to use `cmake-cooking` with IDEs which offer CMake support. A good example is CLion from JetBrains.
+
+Usually these IDEs have configuration options for specifying how the IDE invokes CMake internally.
+
+First, invoke `cooking.sh` from a terminal window as you would without an IDE. This will, by default, create the `build` directory.
+
+Configure your IDE to use a *different* build directory for its CMake products: for example, `build-clion`.
+
+Then, amend the `CMAKE_PREFIX_PATH` to point to the directory of the installed ingredients. That is, instruct your IDE to invoke CMake as follows:
+
+    cmake -DCMAKE_PREFIX_PATH=${PATH_TO_SOURCE_DIR}/build/_cooking/installed # ... other options here ...
+
+Any time you need to reconfigure your project to account for its dependencies, run `cooking.sh` from the terminal window. Otherwise, the IDE should be able to configure and build the project without any knowledge of `cmake-cooking`.
+
 ### Developing many ingredients locally
 
 If an ingredient specifies `SOURCE_DIR` with a path to a directory on the local file-system, then the source code will be copied over once to a project-specific location by `cooking.sh`. This means that if the source code of the ingredient changes, these changes will *not* be incorporated into the project during re-compilation.
