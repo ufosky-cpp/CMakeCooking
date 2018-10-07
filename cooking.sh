@@ -633,6 +633,20 @@ function (_cooking_define_ep)
   add_custom_target (_cooking_ingredient_${pa_NAME}_stowed
     DEPENDS ${stowed_marker_file})
 
+  if (pa_RECIPE)
+    set (reconfigured_marker_file ${Cooking_INGREDIENTS_DIR}/.cooking_reconfigured_ingredient_${pa_NAME})
+
+    add_custom_command (
+      OUTPUT ${reconfigured_marker_file}
+      COMMAND ${CMAKE_COMMAND} -E touch ${reconfigured_marker_file})
+
+    ExternalProject_add_step (${ep_name}
+      cooking-reconfigure
+      DEPENDERS configure
+      DEPENDS ${reconfigured_marker_file}
+      COMMAND ${CMAKE_COMMAND} -E echo_append)
+  endif ()
+
   add_dependencies (_cooking_ingredient_${pa_NAME}_stowed
     ingredient_${pa_NAME}-install)
 
