@@ -293,13 +293,15 @@ macro (project name)
     if (NOT ("${Cooking_RECIPE}" STREQUAL ""))
       add_custom_target (_cooking_ingredients)
 
+      set (_cooking_ready_marker_file ${_cooking_dir}/ready.txt)
+
       add_custom_command (
-        OUTPUT ${_cooking_dir}/ready.txt
+        OUTPUT ${_cooking_ready_marker_file}
         DEPENDS _cooking_ingredients
-        COMMAND ${CMAKE_COMMAND} -E touch ${_cooking_dir}/ready.txt)
+        COMMAND ${CMAKE_COMMAND} -E touch ${_cooking_ready_marker_file})
 
       add_custom_target (_cooking_ingredients_ready
-        DEPENDS ${_cooking_dir}/ready.txt)
+        DEPENDS ${_cooking_ready_marker_file})
 
       set (_cooking_local_synchronize_marker_file ${Cooking_INGREDIENTS_DIR}/.cooking_local_synchronize)
 
@@ -313,7 +315,7 @@ macro (project name)
       list (APPEND CMAKE_PREFIX_PATH ${Cooking_INGREDIENTS_DIR})
       include ("recipe/${Cooking_RECIPE}.cmake")
 
-      if (NOT EXISTS ${_cooking_dir}/ready.txt)
+      if (NOT EXISTS ${_cooking_ready_marker_file})
         return ()
       endif ()
     endif ()
