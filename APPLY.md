@@ -73,27 +73,6 @@ The `-e` ("exclude") and `-i` ("include") options allow us to do this.
 For example, if we wish to use `Egg` installed in some other fashion we can exclude it from our recipe:
 
     ./cooking.sh -r dev -e Egg
-    
-### Developing many ingredients locally
-
-If an ingredient specifies `SOURCE_DIR` with a path to a directory on the local file-system, then the source code will be copied over once to a project-specific location by `cooking.sh`. This means that if the source code of the ingredient changes, these changes will *not* be incorporated into the project during re-compilation.
-
-To support work-flows in which many projects are worked-on simultaneously, the `LOCAL_REBUILD` and `LOCAL_RECONFIGURE` options are available.
-
-Suppose there is a project in `~/src/support_library` and a project `~/src/my_app`.
-
-In `~/src/my_app/recipe/dev.cmake` we have
-
-    cooking_ingredient (SupportLibrary
-      LOCAL_RECONFIGURE
-      EXTERNAL_PROJECT_ARGS
-        SOURCE_DIR ${HOME}/src/support_library)
-
-Since we have specified `LOCAL_RECONFIGURE`, every time we re-run `cooking.sh` for `my_app` it will cause `SupportLibrary` to be re-configured, re-built, and re-installed locally. That is, any changes in `~/src/support_library` will be reflected automatically.
-
-The same would have been true if we had replaced `LOCAL_RECONFIGURE` with `LOCAL_REBUILD`, except that `SupportLibrary` would always be re-built instead of always being re-configured.
-
-*Note*: An ingredient marked with `LOCAL_REBUILD` does not get rebuilt when the build-tool (like `ninja` or `make`) is invoked; only when `cooking.sh` is re-run.
 
 ### Example: A dependency with its own dependencies
 
@@ -122,6 +101,27 @@ For example, consider the `Banana` project:
 To fix this, we use the `REQUIRES` argument in the recipe for `Carrot`. This does two things. The first is that it ensures that `Durian` is executed before `Carrot`. The second is that any recipe for `Durian` inside of `Carrot` is *ignored*. Logically, we are indicating that `Durian` is provided by us and `Carrot` should not provide it itself.
 
 In this way, we can build arbitrary acyclic graphs of dependencies with recipes with maximal flexibility in terms of how we provide each ingredient.
+
+### Developing many ingredients locally
+
+If an ingredient specifies `SOURCE_DIR` with a path to a directory on the local file-system, then the source code will be copied over once to a project-specific location by `cooking.sh`. This means that if the source code of the ingredient changes, these changes will *not* be incorporated into the project during re-compilation.
+
+To support work-flows in which many projects are worked-on simultaneously, the `LOCAL_REBUILD` and `LOCAL_RECONFIGURE` options are available.
+
+Suppose there is a project in `~/src/support_library` and a project `~/src/my_app`.
+
+In `~/src/my_app/recipe/dev.cmake` we have
+
+    cooking_ingredient (SupportLibrary
+      LOCAL_RECONFIGURE
+      EXTERNAL_PROJECT_ARGS
+        SOURCE_DIR ${HOME}/src/support_library)
+
+Since we have specified `LOCAL_RECONFIGURE`, every time we re-run `cooking.sh` for `my_app` it will cause `SupportLibrary` to be re-configured, re-built, and re-installed locally. That is, any changes in `~/src/support_library` will be reflected automatically.
+
+The same would have been true if we had replaced `LOCAL_RECONFIGURE` with `LOCAL_REBUILD`, except that `SupportLibrary` would always be re-built instead of always being re-configured.
+
+*Note*: An ingredient marked with `LOCAL_REBUILD` does not get rebuilt when the build-tool (like `ninja` or `make`) is invoked; only when `cooking.sh` is re-run.
 
 ## Preliminary guidelines
 
