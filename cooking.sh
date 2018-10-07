@@ -245,10 +245,6 @@ macro (project name)
     message (FATAL_ERROR "Cooking: GNU Stow is required!")
   endif ()
 
-  option (Cooking_ENABLED
-    "Indicates that the `Cooking` module is available and in use."
-    ON)
-
   set (Cooking_INGREDIENTS_DIR
     ${_cooking_dir}/installed
     CACHE
@@ -304,6 +300,15 @@ macro (project name)
 
       add_custom_target (_cooking_ingredients_ready
         DEPENDS ${_cooking_dir}/ready.txt)
+
+      set (_cooking_local_synchronize_marker_file ${Cooking_INGREDIENTS_DIR}/.cooking_local_synchronize)
+
+      add_custom_command (
+        OUTPUT ${_cooking_local_synchronize_marker_file}
+        COMMAND ${CMAKE_COMMAND} -E touch ${_cooking_local_synchronize_marker_file})
+
+      add_custom_target (_cooking_marked_for_local_synchronization
+        DEPENDS ${_cooking_local_synchronize_marker_file})
 
       list (APPEND CMAKE_PREFIX_PATH ${Cooking_INGREDIENTS_DIR})
       include ("recipe/${Cooking_RECIPE}.cmake")
@@ -654,6 +659,8 @@ function (_cooking_define_ep)
     add_dependencies (_cooking_ingredient_${pa_NAME}_stowed _cooking_${d}_stowed)
   endforeach ()
 
+  add_dependencies (_cooking_ingredients _cooking_ingredient_${pa_NAME}_stowed)
+
   if (pa_LOCAL_RECONFIGURE OR pa_LOCAL_REBUILD)
     if (pa_LOCAL_RECONFIGURE)
       set (step configure)
@@ -662,20 +669,16 @@ function (_cooking_define_ep)
     endif ()
 
     ExternalProject_add_step (${ep_name}
-      cooking-synchronize-local
+      cooking-local-${step}
       DEPENDERS ${step}
-      COMMAND ${CMAKE_COMMAND} -E echo_append
-      ALWAYS ON)
+      DEPENDS ${_cooking_local_synchronize_marker_file}
+      COMMAND ${CMAKE_COMMAND} -E echo_append)
+
+    ExternalProject_add_stepdependencies (${ep_name}
+      cooking-local-${step}
+      _cooking_marked_for_local_synchronization)
   endif ()
-
-  add_dependencies (_cooking_ingredients _cooking_ingredient_${pa_NAME}_stowed)
 endfunction ()
-
-macro (cooking_mark_targets)
-  foreach (t ${ARGN})
-    add_dependencies (${t} _cooking_ingredients)
-  endforeach ()
-endmacro ()
 
 macro (cooking_ingredient name)
   set (_cooking_args "${ARGN}")

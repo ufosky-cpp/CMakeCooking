@@ -89,23 +89,11 @@ In `~/src/my_app/recipe/dev.cmake` we have
       EXTERNAL_PROJECT_ARGS
         SOURCE_DIR ${HOME}/src/support_library)
 
-Since we have specified `LOCAL_RECONFIGURE`, every time we re-compile `my_app` it will cause `SupportLibrary` to be re-configured, re-built, and re-installed locally. That is, any changes in `~/src/support_library` will be reflected automatically.
+Since we have specified `LOCAL_RECONFIGURE`, every time we re-run `cooking.sh` for `my_app` it will cause `SupportLibrary` to be re-configured, re-built, and re-installed locally. That is, any changes in `~/src/support_library` will be reflected automatically.
 
 The same would have been true if we had replaced `LOCAL_RECONFIGURE` with `LOCAL_REBUILD`, except that `SupportLibrary` would always be re-built instead of always being re-configured.
 
-There is one more necessary step. While `SupportLibrary` will always be re-configured or re-built, we must indicate that our project targets depend directly on these updated ingredients. Otherwise, the order of operations is not defined and our project artifacts may be built before the ingredients are updated. Normally, this is handled automatically by `cooking.sh` but we need extra support to "intercept" the build tool in the local case.
-
-Therefore, we can add the following to `~/src/my_app/CMakeLists.txt`:
-
-    if (Cooking_ENABLED)
-      cooking_mark_targets (my_app)
-    endif ()
-    
-where `my_app` is a target defined by the `MyApp` project.
-
-Doing this ensures that any local changes to an ingredient will always complete before we attempt to build `my_app`.
-
-`cooking_mark_targets` supports an arbitrary number of arguments.
+*Note*: An ingredient marked with `LOCAL_REBUILD` does not get rebuilt when the build-tool (like `ninja` or `make`) is invoked; only when `cooking.sh` is re-run.
 
 ### Example: A dependency with its own dependencies
 
