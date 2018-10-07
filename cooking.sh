@@ -605,6 +605,8 @@ function (_cooking_define_ep)
   set (ep_name ingredient_${pa_NAME})
   include (ExternalProject)
 
+  set (stamp_dir ${pa_INGREDIENT_DIR}/stamp)
+
   ExternalProject_add (${ep_name}
     DEPENDS ${pa_DEPENDS}
     SOURCE_DIR ${pa_SOURCE_DIR}
@@ -613,7 +615,7 @@ function (_cooking_define_ep)
     BUILD_COMMAND ${pa_BUILD_COMMAND}
     INSTALL_COMMAND ${pa_INSTALL_COMMAND}
     PREFIX ${pa_INGREDIENT_DIR}
-    STAMP_DIR ${pa_INGREDIENT_DIR}/stamp
+    STAMP_DIR ${stamp_dir}
     INSTALL_DIR ${pa_STOW_DIR}/${pa_NAME}
     CMAKE_ARGS ${pa_CMAKE_ARGS}
     LIST_SEPARATOR :::
@@ -625,6 +627,9 @@ function (_cooking_define_ep)
 
   add_custom_command (
     OUTPUT ${stow_marker_file}
+    DEPENDS
+      ${ep_name}-install
+      ${stamp_dir}/ingredient_${pa_NAME}-install
     COMMAND
       flock
       --wait 30
@@ -645,18 +650,24 @@ function (_cooking_define_ep)
       OUTPUT ${reconfigure_marker_file}
       COMMAND ${CMAKE_COMMAND} -E touch ${reconfigure_marker_file})
 
+    add_custom_target (_cooking_ingredient_${pa_NAME}_marked_for_reconfigure
+      DEPENDS ${reconfigure_marker_file})
+
     ExternalProject_add_step (${ep_name}
       cooking-reconfigure
       DEPENDERS configure
       DEPENDS ${reconfigure_marker_file}
       COMMAND ${CMAKE_COMMAND} -E echo_append)
+
+    ExternalProject_add_stepdependencies (${ep_name}
+      cooking-reconfigure
+      _cooking_ingredient_${pa_NAME}_marked_for_reconfigure)
   endif ()
 
-  add_dependencies (_cooking_ingredient_${pa_NAME}_stowed
-    ingredient_${pa_NAME}-install)
-
   foreach (d ${pa_DEPENDS})
-    add_dependencies (_cooking_ingredient_${pa_NAME}_stowed _cooking_${d}_stowed)
+    ExternalProject_add_stepdependencies (${ep_name}
+      configure
+      _cooking_${d}_stowed)
   endforeach ()
 
   add_dependencies (_cooking_ingredients _cooking_ingredient_${pa_NAME}_stowed)
