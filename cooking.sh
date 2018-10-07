@@ -395,6 +395,15 @@ function (_cooking_define_listing_targets)
     "REQUIRES"
     ${ARGN})
 
+  set (stale_file ${Cooking_INGREDIENTS_DIR}/.cooking_stale_ingredient_${pa_NAME})
+
+  add_custom_command (
+    OUTPUT ${stale_file}
+    COMMAND ${CMAKE_COMMAND} -E touch ${stale_file})
+
+  add_custom_target (_cooking_ingredient_${pa_NAME}_stale
+    DEPENDS ${stale_file})
+
   set (commands
     COMMAND
     ${CMAKE_COMMAND} -E touch ${Cooking_INGREDIENTS_DIR}/.cooking_ingredient_${pa_NAME})
@@ -412,6 +421,9 @@ function (_cooking_define_listing_targets)
 
   add_custom_command (
     OUTPUT ${Cooking_INGREDIENTS_DIR}/.cooking_ingredient_${pa_NAME}
+    DEPENDS
+      _cooking_ingredient_${pa_NAME}_stale
+      ${stale_file}
     ${commands})
 
   add_custom_target (_cooking_ingredient_${pa_NAME}_listed
