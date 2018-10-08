@@ -1,3 +1,12 @@
+v0.8.1
+------
+2018-10-08
+
+- Also forward the CMake generator when listing ingredients
+- Change the way local synchronization works (remove `cmake_mark_targets` for being too intrusive). See `APPLY.md` for details
+- Ensure that ingredients with their own recipes re-stow their files every time `cooking.sh` is executed
+- Add instructions to `APPLY.md` for using `cmake-cooking` with IDEs like CLion
+
 v0.8.0
 ------
 2018-10-05
