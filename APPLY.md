@@ -73,39 +73,6 @@ The `-e` ("exclude") and `-i` ("include") options allow us to do this.
 For example, if we wish to use `Egg` installed in some other fashion we can exclude it from our recipe:
 
     ./cooking.sh -r dev -e Egg
-    
-### Developing many ingredients locally
-
-If an ingredient specifies `SOURCE_DIR` with a path to a directory on the local file-system, then the source code will be copied over once to a project-specific location by `cooking.sh`. This means that if the source code of the ingredient changes, these changes will *not* be incorporated into the project during re-compilation.
-
-To support work-flows in which many projects are worked-on simultaneously, the `LOCAL_REBUILD` and `LOCAL_RECONFIGURE` options are available.
-
-Suppose there is a project in `~/src/support_library` and a project `~/src/my_app`.
-
-In `~/src/my_app/recipe/dev.cmake` we have
-
-    cooking_ingredient (SupportLibrary
-      LOCAL_RECONFIGURE
-      EXTERNAL_PROJECT_ARGS
-        SOURCE_DIR ${HOME}/src/support_library)
-
-Since we have specified `LOCAL_RECONFIGURE`, every time we re-compile `my_app` it will cause `SupportLibrary` to be re-configured, re-built, and re-installed locally. That is, any changes in `~/src/support_library` will be reflected automatically.
-
-The same would have been true if we had replaced `LOCAL_RECONFIGURE` with `LOCAL_REBUILD`, except that `SupportLibrary` would always be re-built instead of always being re-configured.
-
-There is one more necessary step. While `SupportLibrary` will always be re-configured or re-built, we must indicate that our project targets depend directly on these updated ingredients. Otherwise, the order of operations is not defined and our project artifacts may be built before the ingredients are updated. Normally, this is handled automatically by `cooking.sh` but we need extra support to "intercept" the build tool in the local case.
-
-Therefore, we can add the following to `~/src/my_app/CMakeLists.txt`:
-
-    if (Cooking_ENABLED)
-      cooking_mark_targets (my_app)
-    endif ()
-    
-where `my_app` is a target defined by the `MyApp` project.
-
-Doing this ensures that any local changes to an ingredient will always complete before we attempt to build `my_app`.
-
-`cooking_mark_targets` supports an arbitrary number of arguments.
 
 ### Example: A dependency with its own dependencies
 
@@ -134,6 +101,43 @@ For example, consider the `Banana` project:
 To fix this, we use the `REQUIRES` argument in the recipe for `Carrot`. This does two things. The first is that it ensures that `Durian` is executed before `Carrot`. The second is that any recipe for `Durian` inside of `Carrot` is *ignored*. Logically, we are indicating that `Durian` is provided by us and `Carrot` should not provide it itself.
 
 In this way, we can build arbitrary acyclic graphs of dependencies with recipes with maximal flexibility in terms of how we provide each ingredient.
+
+### Using `cmake-cooking` with integrated development environments (IDEs)
+
+It is very easy to use `cmake-cooking` with IDEs which offer CMake support. A good example is CLion from JetBrains.
+
+Usually these IDEs have configuration options for specifying how the IDE invokes CMake internally.
+
+First, invoke `cooking.sh` from a terminal window as you would without an IDE. This will, by default, create the `build` directory.
+
+Configure your IDE to use a *different* build directory for its CMake products: for example, `build-clion`.
+
+Then, amend the `CMAKE_PREFIX_PATH` to point to the directory of the installed ingredients. That is, instruct your IDE to invoke CMake as follows:
+
+    cmake -DCMAKE_PREFIX_PATH=${PATH_TO_SOURCE_DIR}/build/_cooking/installed # ... other options here ...
+
+Any time you need to reconfigure your project to account for its dependencies, run `cooking.sh` from the terminal window. Otherwise, the IDE should be able to configure and build the project without any knowledge of `cmake-cooking`.
+
+### Developing many ingredients locally
+
+If an ingredient specifies `SOURCE_DIR` with a path to a directory on the local file-system, then the source code will be copied over once to a project-specific location by `cooking.sh`. This means that if the source code of the ingredient changes, these changes will *not* be incorporated into the project during re-compilation.
+
+To support work-flows in which many projects are worked-on simultaneously, the `LOCAL_REBUILD` and `LOCAL_RECONFIGURE` options are available.
+
+Suppose there is a project in `~/src/support_library` and a project `~/src/my_app`.
+
+In `~/src/my_app/recipe/dev.cmake` we have
+
+    cooking_ingredient (SupportLibrary
+      LOCAL_RECONFIGURE
+      EXTERNAL_PROJECT_ARGS
+        SOURCE_DIR ${HOME}/src/support_library)
+
+Since we have specified `LOCAL_RECONFIGURE`, every time we re-run `cooking.sh` for `my_app` it will cause `SupportLibrary` to be re-configured, re-built, and re-installed locally. That is, any changes in `~/src/support_library` will be reflected automatically.
+
+The same would have been true if we had replaced `LOCAL_RECONFIGURE` with `LOCAL_REBUILD`, except that `SupportLibrary` would always be re-built instead of always being re-configured.
+
+*Note*: An ingredient marked with `LOCAL_REBUILD` does not get rebuilt when the build-tool (like `ninja` or `make`) is invoked; only when `cooking.sh` is re-run.
 
 ## Preliminary guidelines
 
